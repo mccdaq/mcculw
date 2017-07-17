@@ -89,7 +89,7 @@ steps on how to reproduce the problem in your request.
 Bugs/Feature Requests
 =====================
 To report a bug or submit a feature request, please use the **mcculw**
-`GitHub <https://github.com/mccdaq/mcculw>`_ issues page.
+`GitHub issues <https://github.com/mccdaq/mcculw/issues>`_ page.
 
 Documentation
 =============
