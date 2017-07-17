@@ -21,6 +21,9 @@ upgrade your version of UL.
 
 **mcculw** supports CPython 2.7 and 3.4+.
 
+The **mcculw** package is available on `GitHub <https://github.com/mccdaq/mcculw>`_ and
+`PyPI <https://pypi.python.org/pypi/mcculw>`_.
+
 Installation
 ============
 Running **mcculw** requires InstaCal. Visit
@@ -29,12 +32,12 @@ download the latest version of InstaCal.
 
 **mcculw** can be installed with pip::
 
-  $ python pip install mcculw
+  $ pip install mcculw
     
 Examples
 ========
 Download the examples from the **mcculw**
-`GitHub examples.zip <https://github.com/mccdaq/mcculw/raw/master/examples.zip>`_.
+`GitHub Repository <https://github.com/mccdaq/mcculw/raw/master/examples.zip>`_.
 
 
 Unzip the examples to a known location, such as::

@@ -4,6 +4,7 @@ from os import path
 
 from setuptools import setup, find_packages
 
+from version import __version__
 
 here = path.abspath(path.dirname(__file__))
 
@@ -17,7 +18,7 @@ setup(
     # Versions should comply with PEP440.  For a discussion on single-sourcing
     # the version across setup.py and the project code, see
     # https://packaging.python.org/en/latest/single_source_version.html
-    version='0.9.0',
+    version=__version__,
 
     description=('MCC Universal Library Python API for Windows'),
     long_description=long_description,
@@ -38,7 +39,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 5 - Production/Stable',
+        'Development Status :: 4 - Beta',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
