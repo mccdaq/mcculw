@@ -33,7 +33,8 @@ download the latest version of InstaCal.
     
 Examples
 ========
-Download the examples from the **mcculw** `GitHub <https://github.com/mccdaq/mcculw>`_.
+Download the examples from the **mcculw**
+`GitHub examples.zip <https://github.com/mccdaq/mcculw/raw/master/examples.zip>`_.
 
 
 Unzip the examples to a known location, such as::
