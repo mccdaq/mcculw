@@ -3,20 +3,20 @@ from __future__ import absolute_import, division, print_function
 import math
 
 from builtins import *  # @UnusedWildImport
-from tkinter import messagebox
-
 from mcculw import ul
 from mcculw.enums import ScanOptions, Status, FunctionType
+from mcculw.ul import ULError
+from tkinter import messagebox
+
 from examples.props.ai import AnalogInputProps
 from examples.props.ao import AnalogOutputProps
 from examples.ui.uiexample import UIExample
-from mcculw.ul import ULError
 import tkinter as tk
 
 
-class ULAI06(UIExample):
+class ULAIO01(UIExample):
     def __init__(self, master=None):
-        super(ULAI06, self).__init__(master)
+        super(ULAIO01, self).__init__(master)
 
         self.board_num = 0
         self.ai_props = AnalogInputProps(self.board_num)
@@ -26,12 +26,12 @@ class ULAI06(UIExample):
         self.create_widgets()
 
     def start_input_scan(self):
-        self.output_low_chan = self.get_input_low_channel_num()
-        self.output_high_chan = self.get_input_high_channel_num()
-        self.num_output_chans = (
-            self.output_high_chan - self.output_low_chan + 1)
+        self.input_low_chan = self.get_input_low_channel_num()
+        self.input_high_chan = self.get_input_high_channel_num()
+        self.num_input_chans = (
+            self.input_high_chan - self.input_low_chan + 1)
 
-        if self.output_low_chan > self.output_high_chan:
+        if self.input_low_chan > self.input_high_chan:
             messagebox.showerror(
                 "Error",
                 "Low Channel Number must be greater than or equal to High "
@@ -41,7 +41,7 @@ class ULAI06(UIExample):
 
         rate = 100
         points_per_channel = 1000
-        total_count = points_per_channel * self.num_output_chans
+        total_count = points_per_channel * self.num_input_chans
         range_ = self.ai_props.available_ranges[0]
         scan_options = ScanOptions.BACKGROUND | ScanOptions.CONTINUOUS
 
@@ -66,7 +66,7 @@ class ULAI06(UIExample):
         try:
             # Run the scan
             ul.a_in_scan(
-                self.board_num, self.output_low_chan, self.output_high_chan,
+                self.board_num, self.input_low_chan, self.input_high_chan,
                 total_count, rate, range_, self.input_memhandle,
                 scan_options)
         except ULError as e:
@@ -124,8 +124,8 @@ class ULAI06(UIExample):
     def display_input_values(self, range_, curr_index, curr_count):
         per_channel_display_count = 10
         array = self.ctypes_array
-        low_chan = self.output_low_chan
-        high_chan = self.output_high_chan
+        low_chan = self.input_low_chan
+        high_chan = self.input_high_chan
         channel_text = []
 
         # Add the headers
@@ -149,12 +149,14 @@ class ULAI06(UIExample):
                     first_index + min(
                         chan_count * per_channel_display_count,
                         curr_count)):
+
+                raw_value = array[data_index]
                 if self.ai_props.resolution <= 16:
                     eng_value = ul.to_eng_units(
-                        self.board_num, range_, array[data_index])
+                        self.board_num, range_, raw_value)
                 else:
                     eng_value = ul.to_eng_units_32(
-                        self.board_num, range_, array[data_index])
+                        self.board_num, range_, raw_value)
                 channel_text[chan_num - low_chan] += (
                     '{:.3f}'.format(eng_value) + "\n")
                 if chan_num == high_chan:
@@ -168,8 +170,8 @@ class ULAI06(UIExample):
             self.chan_labels[chan_index]["text"] = channel_text[chan_index]
 
     def recreate_input_data_frame(self):
-        low_chan = self.output_low_chan
-        high_chan = self.output_high_chan
+        low_chan = self.input_low_chan
+        high_chan = self.input_high_chan
 
         new_data_frame = tk.Frame(self.input_inner_data_frame)
 
@@ -615,4 +617,4 @@ class ULAI06(UIExample):
 
 if __name__ == "__main__":
     # Start the example
-    ULAI06(master=tk.Tk()).mainloop()
+    ULAIO01(master=tk.Tk()).mainloop()

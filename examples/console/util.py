@@ -23,8 +23,12 @@ def config_first_detected_device(board_num):
     devices = ul.get_daq_device_inventory(InterfaceType.ANY)
     # Check if any devices were found
     if len(devices) > 0:
+        device = devices[0]
+        # Print a messsage describing the device found
+        print("Found device: " + device.product_name +
+              " (" + device.unique_id + ")\n")
         # Add the device to the UL.
-        ul.create_daq_device(board_num, devices[0])
+        ul.create_daq_device(board_num, device)
         return True
 
     return False
@@ -52,6 +56,9 @@ def config_first_detected_device_of_type(board_num, types_list):
                    if device.product_id in types_list), None)
 
     if device != None:
+        # Print a messsage describing the device found
+        print("Found device: " + device.product_name +
+              " (" + device.unique_id + ")\n")
         # Add the device to the UL.
         ul.create_daq_device(board_num, device)
         return True
