@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function
+
 from builtins import *  # @UnusedWildImport
-
-from tkinter.ttk import Combobox  # @UnresolvedImport
-
 from mcculw import ul
 from mcculw.enums import TrigType
-from examples.ui.uiexample import UIExample
-from examples.props.ai import AnalogInputProps
 from mcculw.ul import ULError
+from tkinter.ttk import Combobox  # @UnresolvedImport
+
+from examples.props.ai import AnalogInputProps
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -131,7 +131,7 @@ class ULAI07(UIExample):
 
             curr_row += 1
             trigger_level_label = tk.Label(main_frame)
-            trigger_level_label["text"] = "Trigger Level:"
+            trigger_level_label["text"] = "Trigger Level (V):"
             trigger_level_label.grid(row=curr_row, column=0, sticky=tk.W)
 
             self.trigger_level_entry = tk.Entry(

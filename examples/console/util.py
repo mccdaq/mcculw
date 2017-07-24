@@ -20,7 +20,7 @@ def config_first_detected_device(board_num):
     """
 
     # Get the device inventory
-    devices = ul.get_daq_device_inventory(InterfaceType.USB)
+    devices = ul.get_daq_device_inventory(InterfaceType.ANY)
     # Check if any devices were found
     if len(devices) > 0:
         # Add the device to the UL.
@@ -46,7 +46,7 @@ def config_first_detected_device_of_type(board_num, types_list):
     """
 
     # Get the device inventory
-    devices = ul.get_daq_device_inventory(InterfaceType.USB)
+    devices = ul.get_daq_device_inventory(InterfaceType.ANY)
 
     device = next((device for device in devices
                    if device.product_id in types_list), None)

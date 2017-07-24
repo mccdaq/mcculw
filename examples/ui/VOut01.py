@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
 from mcculw import ul
-from examples.ui.uiexample import UIExample
-from examples.props.ao import AnalogOutputProps
 from mcculw.ul import ULError
+
+from examples.props.ao import AnalogOutputProps
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -78,7 +79,7 @@ class VOut01(UIExample):
                 curr_row += 1
 
             data_value_label = tk.Label(main_frame)
-            data_value_label["text"] = "Value:"
+            data_value_label["text"] = "Value (V):"
             data_value_label.grid(row=curr_row, column=0, sticky=tk.W)
 
             self.data_value_entry = tk.Entry(

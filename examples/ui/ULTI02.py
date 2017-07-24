@@ -1,11 +1,12 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
 from mcculw import ul
 from mcculw.enums import TempScale, ErrorCode
-from examples.ui.uiexample import UIExample
-from examples.props.ai import AnalogInputProps
 from mcculw.ul import ULError
+
+from examples.props.ai import AnalogInputProps
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -131,7 +132,7 @@ class ULTI02(UIExample):
         main_frame = tk.Frame(self)
         main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-        example_supported = self.ai_props.num_ti_chans > 0
+        example_supported = self.ai_props.num_ti_chans > 1
 
         if example_supported:
             channel_vcmd = self.register(self.validate_channel_entry)

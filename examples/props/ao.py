@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
 from mcculw.enums import BoardInfo, InfoType, ULRange, FunctionType
-from examples.props.propsbase import Props
 from mcculw.ul import ULError
+
+from examples.props.propsbase import Props
 
 
 class AnalogOutputProps(Props):
@@ -71,6 +71,16 @@ class AnalogOutputProps(Props):
                 pass
 
         return result
+
+    def get_units_string(self, ao_range):
+        if ao_range in [
+                ULRange.MA4TO20,
+                ULRange.MA2TO10,
+                ULRange.MA1TO5,
+                ULRange.MAPT5TO2PT5]:
+            return "mA"
+        else:
+            return "V"
 
     def _get_supports_v_out(self, available_ranges):
         if len(available_ranges) == 0:

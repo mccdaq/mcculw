@@ -1,11 +1,11 @@
 from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
+from mcculw.ul import ULError
+
 from examples.props.ao import AnalogOutputProps
 from examples.ui.uiexample import UIExample
-from mcculw.ul import ULError
 import tkinter as tk
 
 
@@ -83,8 +83,11 @@ class ULAO01(UIExample):
 
                 curr_row += 1
 
+            units_text = self.ao_props.get_units_string(
+                self.ao_props.available_ranges[0])
+            value_label_text = "Value (" + units_text + "):"
             data_value_label = tk.Label(main_frame)
-            data_value_label["text"] = "Value:"
+            data_value_label["text"] = value_label_text
             data_value_label.grid(row=curr_row, column=0, sticky=tk.W)
 
             self.data_value_entry = tk.Entry(
