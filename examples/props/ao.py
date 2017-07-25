@@ -2,7 +2,7 @@ from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
 from mcculw import ul
-from mcculw.enums import BoardInfo, InfoType, ULRange, FunctionType
+from mcculw.enums import BoardInfo, InfoType, ULRange, ErrorCode, ScanOptions
 from mcculw.ul import ULError
 
 from examples.props.propsbase import Props
@@ -25,7 +25,9 @@ class AnalogOutputProps(Props):
         self.available_ranges = self._get_available_ranges()
         self.supports_v_out = self._get_supports_v_out(
             self.available_ranges)
-        self.supports_scan = self._get_supports_scan()
+        self.supported_scan_options = self._get_supported_scan_options()
+        self.supports_scan = (
+            ScanOptions.CONTINUOUS in self.supported_scan_options)
 
     def _get_resolution(self):
         return ul.get_config(
@@ -35,12 +37,13 @@ class AnalogOutputProps(Props):
         return ul.get_config(
             InfoType.BOARDINFO, self._board_num, 0, BoardInfo.NUMDACHANS)
 
-    def _get_supports_scan(self):
+    def _get_supported_scan_options(self):
         try:
-            ul.get_status(self._board_num, FunctionType.AOFUNCTION)
+            return ScanOptions(ul.get_config(
+                InfoType.BOARDINFO, self._board_num, 0,
+                BoardInfo.DACSCANOPTIONS))
         except ULError:
-            return False
-        return True
+            return ScanOptions(0)
 
     def _get_available_ranges(self):
         result = []
@@ -49,7 +52,10 @@ class AnalogOutputProps(Props):
         try:
             ul.a_out(self._board_num, 0, -5, 0)
             range_ignored = True
-        except ULError:
+        except ULError as e:
+            if (e.errorcode == ErrorCode.NETDEVINUSE or
+                    e.errorcode == ErrorCode.NETDEVINUSEBYANOTHERPROC):
+                raise
             range_ignored = False
 
         if range_ignored:
@@ -59,16 +65,20 @@ class AnalogOutputProps(Props):
                     InfoType.BOARDINFO, self._board_num, 0,
                     BoardInfo.DACRANGE))
                 result.append(curr_range)
-            except ULError:
-                pass
+            except ULError as e:
+                if (e.errorcode == ErrorCode.NETDEVINUSE or
+                        e.errorcode == ErrorCode.NETDEVINUSEBYANOTHERPROC):
+                    raise
             return result
 
         for dac_range in ULRange:
             try:
                 ul.a_out(self._board_num, 0, dac_range, 0)
                 result.append(dac_range)
-            except ULError:
-                pass
+            except ULError as e:
+                if (e.errorcode == ErrorCode.NETDEVINUSE or
+                        e.errorcode == ErrorCode.NETDEVINUSEBYANOTHERPROC):
+                    raise
 
         return result
 

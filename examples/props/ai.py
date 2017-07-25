@@ -1,12 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
 from mcculw.enums import BoardInfo, InfoType, ULRange, FunctionType,\
-    TrigType, ScanOptions
-from examples.props.propsbase import Props
+    TrigType, ScanOptions, ErrorCode
 from mcculw.ul import ULError
+
+from examples.props.propsbase import Props
 
 
 class AnalogInputProps(Props):
@@ -167,7 +167,9 @@ class AnalogInputProps(Props):
                     else:
                         ul.a_in_32(self._board_num, 0, ai_range)
                     result.append(ai_range)
-                except ULError:
-                    pass
+                except ULError as e:
+                    if (e.errorcode == ErrorCode.NETDEVINUSE or
+                            e.errorcode == ErrorCode.NETDEVINUSEBYANOTHERPROC):
+                        raise
 
         return result

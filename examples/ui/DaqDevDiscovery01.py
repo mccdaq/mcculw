@@ -1,13 +1,13 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
+from mcculw import ul
+from mcculw.enums import InterfaceType
+from mcculw.ul import ULError
 from tkinter import StringVar
 from tkinter.ttk import Combobox  # @UnresolvedImport
 
-from mcculw import ul
-from mcculw.enums import InterfaceType
 from examples.ui.uiexample import UIExample
-from mcculw.ul import ULError
 import tkinter as tk
 
 
@@ -15,6 +15,11 @@ class DaqDevDiscovery01(UIExample):
     def __init__(self, master):
         super(DaqDevDiscovery01, self).__init__(master)
 
+        self.board_num = 0
+
+        self.device_created = False
+
+        # Tell the UL to ignore any boards configured in InstaCal
         ul.ignore_instacal()
 
         self.create_widgets()
@@ -43,34 +48,34 @@ class DaqDevDiscovery01(UIExample):
         self.update_selected_device_id()
 
     def flash_led(self):
-        selected_index = self.devices_combobox.current()
-        descriptor = self.inventory[selected_index]
-
-        board_num = 0
-
-        # Create the DAQ device from the descriptor
-        # For performance reasons, it is not recommended to create and release
-        # the device every time hardware communication is required (as is done
-        # in this example). Instead, create the device once and do not release
-        # it until no additional library calls will be made for this device
-        # (typically at application exit)
-        ul.create_daq_device(board_num, descriptor)
-
         try:
             # Flash the device LED
-            ul.flash_led(board_num)
+            ul.flash_led(self.board_num)
         except ULError as e:
             self.show_ul_error(e)
-        finally:
-            # Release the DAQ device from the UL.
-            ul.release_daq_device(board_num)
 
-    def update_selected_device_id(self, *args):
+    def selected_device_changed(self, *args):  # @UnusedVariable
         selected_index = self.devices_combobox.current()
         inventory_count = len(self.inventory)
+
+        if self.device_created:
+            # Release any previously configured DAQ device from the UL.
+            ul.release_daq_device(self.board_num)
+            self.device_created = False
+
         if inventory_count > 0 and selected_index < inventory_count:
             descriptor = self.inventory[selected_index]
+            # Update the device ID label
             self.device_id_label["text"] = descriptor.unique_id
+
+            # Create the DAQ device from the descriptor
+            # For performance reasons, it is not recommended to create
+            # and release the device every time hardware communication is
+            # required. Instead, create the device once and do not release
+            # it until no additional library calls will be made for this
+            # device
+            ul.create_daq_device(self.board_num, descriptor)
+            self.device_created = True
 
     def create_widgets(self):
         '''Create the tkinter UI'''
@@ -90,7 +95,7 @@ class DaqDevDiscovery01(UIExample):
         results_group.pack(fill=tk.X, anchor=tk.NW, padx=3, pady=3)
 
         self.selected_device_textvar = StringVar()
-        self.selected_device_textvar.trace('w', self.update_selected_device_id)
+        self.selected_device_textvar.trace('w', self.selected_device_changed)
         self.devices_combobox = Combobox(
             results_group, textvariable=self.selected_device_textvar)
         self.devices_combobox["state"] = "disabled"

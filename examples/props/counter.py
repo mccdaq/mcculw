@@ -4,9 +4,8 @@ from builtins import *  # @UnusedWildImport
 
 from mcculw import ul
 from mcculw.enums import InfoType, BoardInfo, CounterInfo, \
-    CounterChannelType, FunctionType, ScanOptions
+    CounterChannelType, ScanOptions
 from examples.props.propsbase import Props
-from mcculw.ul import ULError
 
 
 class CounterProps(Props):
