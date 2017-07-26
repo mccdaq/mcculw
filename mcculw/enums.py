@@ -360,7 +360,6 @@ class FunctionType(IntEnum):
     CTRFUNCTION = 5  # Counter Function
     DAQIFUNCTION = 6  # Daq Input Function
     DAQOFUNCTION = 7  # Daq Output Function
-    EVTFUNCTION = 8  # For Internal Use
 
 
 class DeviceType(IntEnum):
@@ -1345,10 +1344,10 @@ class TempSensorConnectionType(IntEnum):
 
 
 class ExcitationLevel(IntEnum):
-    EXCITATION_NONE = 0x00
-    EXCITATION_THERMISTOR = 0x01
-    EXCITATION_RTD = 0x02
-    EXCITATION_PLUS = 0x03
+    NONE = 0x00
+    THERMISTOR = 0x01
+    RTD = 0x02
+    PLUS = 0x03
 
 
 class TcType(IntEnum):

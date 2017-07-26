@@ -1,11 +1,12 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
 from mcculw import ul
 from mcculw.enums import CounterChannelType
-from examples.ui.uiexample import UIExample
-from examples.props.counter import CounterProps
 from mcculw.ul import ULError
+
+from examples.props.counter import CounterProps
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -39,6 +40,7 @@ class PulseOutStart01(UIExample):
             frequency = self.get_frequency()
             duty_cycle = self.get_duty_cycle()
 
+            # Start the pulse output (optional parameters omitted)
             actual_freq, actual_duty_cycle, _ = ul.pulse_out_start(
                 self.board_num, timer_num, frequency, duty_cycle)
 

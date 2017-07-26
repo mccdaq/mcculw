@@ -1,10 +1,12 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
 from mcculw import ul
+from mcculw.ul import ULError
+
 from examples.console import util
 from examples.props.ai import AnalogInputProps
-from mcculw.ul import ULError
+
 
 use_device_detection = True
 
@@ -31,9 +33,11 @@ def run_example():
         # Get a value from the device
         if ai_props.resolution <= 16:
             # Use the v_in method for devices with a resolution <= 16
+            # (optional parameter omitted)
             value = ul.v_in(board_num, channel, ai_range)
         else:
             # Use the v_in_32 method for devices with a resolution > 16
+            # (optional parameter omitted)
             value = ul.v_in_32(board_num, channel, ai_range)
 
         # Display the value

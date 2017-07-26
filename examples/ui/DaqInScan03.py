@@ -1,17 +1,17 @@
 from __future__ import absolute_import, division, print_function
+
 from builtins import *  # @UnusedWildImport
-
 from enum import Enum
-from tkinter import messagebox
-
 from mcculw import ul
 from mcculw.enums import DigitalPortType, ChannelType, ULRange, CounterMode, \
     CounterDebounceTime, CounterEdgeDetection, DigitalIODirection, TempScale, ErrorCode, \
     CounterTickSize
-from examples.ui.uiexample import UIExample
+from mcculw.ul import ULError
+from tkinter import messagebox
+
 from examples.props.ai import AnalogInputProps
 from examples.props.daqi import DaqInputProps
-from mcculw.ul import ULError
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -100,7 +100,7 @@ class DaqInScan03(UIExample):
                 self.board_num, self.chan_list, self.chan_type_list, self.gain_list,
                 self.num_chans, rate, 0, total_count, memhandle, 0)
 
-            # Convert the TC values
+            # Convert the TC values (optional parameter omitted)
             err, temp_data_array = ul.get_tc_values(
                 self.board_num, self.chan_list, self.chan_type_list, self.num_chans,
                 memhandle, 0, points_per_channel, TempScale.CELSIUS)

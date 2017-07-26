@@ -49,7 +49,7 @@ def config_first_detected_device_of_type(board_num, types_list):
         found. 
     """
 
-    # Get the device inventory
+    # Get the device inventory (optional parameter omitted)
     devices = ul.get_daq_device_inventory(InterfaceType.ANY)
 
     device = next((device for device in devices

@@ -38,7 +38,8 @@ def run_example():
             eng_units_value = ul.to_eng_units(board_num, ai_range, value)
         else:
             # Use the a_in_32 method for devices with a resolution > 16
-            value = ul.a_in_32(board_num, channel, ai_range, 0)
+            # (optional parameter omitted)
+            value = ul.a_in_32(board_num, channel, ai_range)
             # Convert the raw value to engineering units
             eng_units_value = ul.to_eng_units_32(board_num, ai_range, value)
 

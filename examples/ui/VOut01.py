@@ -24,6 +24,7 @@ class VOut01(UIExample):
         data_value = self.get_data_value()
 
         try:
+            # Send the value to the device (optional parameter omitted)
             ul.v_out(self.board_num, channel, ao_range, data_value)
         except ULError as e:
             self.show_ul_error(e)

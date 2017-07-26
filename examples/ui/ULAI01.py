@@ -1,10 +1,11 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
 from mcculw import ul
-from examples.ui.uiexample import UIExample
-from examples.props.ai import AnalogInputProps
 from mcculw.ul import ULError
+
+from examples.props.ai import AnalogInputProps
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -33,7 +34,8 @@ class ULAI01(UIExample):
                     self.board_num, ai_range, value)
             else:
                 # Use the a_in_32 method for devices with a resolution > 16
-                value = ul.a_in_32(self.board_num, channel, ai_range, 0)
+                # (optional parameter omitted)
+                value = ul.a_in_32(self.board_num, channel, ai_range)
                 # Convert the raw value to engineering units
                 eng_units_value = ul.to_eng_units_32(
                     self.board_num, ai_range, value)

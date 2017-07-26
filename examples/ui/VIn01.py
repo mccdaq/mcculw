@@ -1,12 +1,12 @@
 from __future__ import absolute_import, division, print_function
-from builtins import *  # @UnusedWildImport
 
+from builtins import *  # @UnusedWildImport
+from mcculw import ul
+from mcculw.ul import ULError
 from tkinter.ttk import Combobox  # @UnresolvedImport
 
-from mcculw import ul
-from examples.ui.uiexample import UIExample
 from examples.props.ai import AnalogInputProps
-from mcculw.ul import ULError
+from examples.ui.uiexample import UIExample
 import tkinter as tk
 
 
@@ -29,9 +29,11 @@ class VIn01(UIExample):
             # Get a value from the device
             if self.ai_props.resolution <= 16:
                 # Use the v_in method for devices with a resolution <= 16
+                # (optional parameter omitted)
                 value = ul.v_in(self.board_num, channel, ai_range)
             else:
                 # Use the v_in_32 method for devices with a resolution > 16
+                # (optional parameter omitted)
                 value = ul.v_in_32(self.board_num, channel, ai_range)
 
             # Display the raw value

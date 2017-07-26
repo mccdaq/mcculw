@@ -1,12 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
 from mcculw.enums import TempScale
+from mcculw.ul import ULError
+
 from examples.console import util
 from examples.props.ai import AnalogInputProps
-from mcculw.ul import ULError
 
 
 use_device_detection = True
@@ -29,6 +29,7 @@ def run_example():
         return
 
     try:
+        # Get the value from the device (optional parameters omitted)
         value = ul.t_in(board_num, channel, TempScale.CELSIUS)
 
         # Display the value

@@ -1,11 +1,12 @@
 from __future__ import absolute_import, division, print_function
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
+from mcculw.ul import ULError
+
 from examples.console import util
 from examples.props.ao import AnalogOutputProps
-from mcculw.ul import ULError
+
 
 use_device_detection = True
 
@@ -34,6 +35,7 @@ def run_example():
         print(
             "Outputting " + str(data_value) + " Volts to channel "
             + str(channel) + ".")
+        # Send the value to the device (optional parameter omitted)
         ul.v_out(board_num, channel, ao_range, data_value)
     except ULError as e:
         util.print_ul_error(e)

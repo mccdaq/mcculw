@@ -3,12 +3,12 @@ from __future__ import absolute_import, division, print_function
 import time
 
 from builtins import *  # @UnusedWildImport
-
 from mcculw import ul
 from mcculw.enums import CounterChannelType
+from mcculw.ul import ULError
+
 from examples.console import util
 from examples.props.counter import CounterProps
-from mcculw.ul import ULError
 
 
 use_device_detection = True
@@ -39,7 +39,7 @@ def run_example():
     duty_cycle = 0.5
 
     try:
-        # Start the pulse timer output
+        # Start the pulse timer output (optional parameters omitted)
         actual_frequency, actual_duty_cycle, _ = ul.pulse_out_start(
             board_num, timer_num, frequency, duty_cycle)
 

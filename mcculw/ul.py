@@ -4136,7 +4136,7 @@ def pulse_out_start(board_num, timer_num, frequency, duty_cycle, pulse_count=0, 
     .. table:: **options parameter values**
 
         ==========  ===============================================================================
-        Exttrigger  If this option is specified, output pulses are not generated until the trigger
+        EXTTRIGGER  If this option is specified, output pulses are not generated until the trigger
                     condition is met. You can set the trigger condition to rising edge, falling
                     edge, or the level of the digital trigger input (TTL) with the
                     :func:`.set_trigger` function. Refer to board-specific information. 
@@ -5018,7 +5018,7 @@ def teds_read(board_num, channel, count, data_array=None, options=0):
     if data_array == None:
         data_array = (c_byte * count)()
     count_internal = c_long(count)
-    _check_err(_cbw.cbTEDSRead(c_int, c_int, data_array,
+    _check_err(_cbw.cbTEDSRead(board_num, channel, data_array,
                                byref(count_internal), options))
     return TedsReadResult(data_array, count_internal.value)
 

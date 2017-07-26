@@ -23,6 +23,7 @@ class ULTI02(UIExample):
 
     def update_values(self):
         try:
+            # Get the values from the device (optional parameters omitted)
             err_code, data_array = ul.t_in_scan(
                 self.board_num, self.low_chan, self.high_chan,
                 TempScale.CELSIUS)
