@@ -57,11 +57,11 @@ class DaqDeviceDescriptor(Structure):
 
     @property
     def interface_type(self):
-        return InterfaceType(self.interface_type)
+        return InterfaceType(self._interface_type)
 
     @interface_type.setter
     def interface_type(self, value):
-        self.interface_type = value
+        self._interface_type = value
 
     @property
     def dev_string(self):
