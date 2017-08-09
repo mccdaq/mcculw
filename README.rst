@@ -43,7 +43,7 @@ Installation
     
 Examples
 ========
-Download the `examples zip file`_ from the **mcculw** GitHub Repository.
+Download the `examples zip file`_ from the **mcculw** GitHub repository.
 
 Unzip the examples to a known location, such as::
 
@@ -96,12 +96,11 @@ To report a bug or submit a feature request, please use the **mcculw** `GitHub I
 
 Documentation
 =============
-Documentation is available in the
-`Universal Library Help`_.
+Documentation is available in the `Universal Library Help`_.
 
 License
 =======
-mcculw is licensed under an MIT-style license. Other incorporated projects may be licensed under 
+**mcculw** is licensed under an MIT-style license. Other incorporated projects may be licensed under 
 different licenses. All licenses allow for non-commercial and commercial use.
 
 .. Links:
