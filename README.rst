@@ -36,10 +36,10 @@ Installation
    
         pip install mcculw
 
-   Note: If you get a message like "pip is not recognized as an internal or external command...", or if
-   you have multiple Python installations, enter the full path to the pip executable, such as
-   *C:\\Python27\\Scripts\\pip install --upgrade pip* or *pip install mcculw*. The pip command is in the Scripts subdirectory
-   of your Python install location.
+   Note: If you get a message like "pip is not recognized as an internal or external command...", or
+   if you have multiple Python installations, enter the full path to the pip executable, such as
+   *C:\\Python27\\Scripts\\pip install --upgrade pip* or *C:\\Python27\\Scripts\\pip install mcculw*.
+   The pip command is in the Scripts subdirectory of your Python install location.
     
 Examples
 ========
