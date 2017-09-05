@@ -4220,6 +4220,7 @@ def scaled_win_array_to_buf(data_array, memhandle, first_point, count):
 
 
 _cbw.cbScaledWinBufAlloc.argtypes = [c_long]
+_cbw.cbScaledWinBufAlloc.restype = HGLOBAL
 
 
 def scaled_win_buf_alloc(num_points):
@@ -5500,6 +5501,7 @@ def win_array_to_buf_32(data_array, memhandle, first_point, count):
 
 
 _cbw.cbWinBufAlloc.argtypes = [c_long]
+_cbw.cbWinBufAlloc.restype = HGLOBAL
 
 
 def win_buf_alloc(num_points):
@@ -5539,6 +5541,7 @@ def win_buf_alloc(num_points):
 
 
 _cbw.cbWinBufAlloc32.argtypes = [c_long]
+_cbw.cbWinBufAlloc32.restype = HGLOBAL
 
 
 def win_buf_alloc_32(num_points):
@@ -5578,6 +5581,7 @@ def win_buf_alloc_32(num_points):
 
 
 _cbw.cbWinBufAlloc64.argtypes = [c_long]
+_cbw.cbWinBufAlloc64.restype = HGLOBAL
 
 
 def win_buf_alloc_64(num_points):
