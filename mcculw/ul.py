@@ -5810,6 +5810,64 @@ def win_buf_to_array_64(memhandle, data_array, first_point, count):
     _cbw.cbWinBufToArray64(memhandle, data_array, first_point, count)
 
 
+_cbw.cbInByte.argtypes = [c_int, c_int]
+
+
+def in_byte(board_num, port_num):
+    """Reads a byte from a hardware register on a board.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    port_num : int
+        RRegister within the board. Boards are set to a particular base address. The registers
+        on the boards are at addresses that are offsets from the base address of the
+        board (BaseAdr + 0, BaseAdr + 2, etc).
+        Set this argument to the offset for the desired register. This function takes care
+        of adding the base address to the offset, so that the board's address can be changed
+        without changing the code.
+
+    Returns
+    -------
+    int
+        The current value of the specified register.
+        cbInByte() is used to read 8 bit ports.
+
+    Notes
+    -----
+    - Unlike most other functions in the library, this function does not raise a ULError. It
+      returns a byte value from the devices on board NVRAM.
+      If an error occurs, the value will come back as 0 to indicate that a value was not read.
+    """
+    return _cbw.cbInByte(board_num, port_num)
+
+
+_cbw.cbOutByte.argtypes = [c_int, c_int, c_int]
+
+
+def out_byte(board_num, port_num, port_value):
+    """Writes a byte to a hardware register on a board.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    port_num : int
+        Register within the board. Boards are set to a particular base address. The registers
+        on the boards are at addresses that are offsets from the base address of the board
+        (BaseAdr + 0, BaseAdr + 2, etc).
+        Set this argument to the offset for the desired register. This function takes care of
+        adding the base address to the offset, so that the board's address can be changed
+        without changing the code.
+    port_value : int
+        VValue that is written to the register.
+    """
+    _check_err(_cbw.cbOutByte(board_num, port_num, port_value))
+
+
 def _to_ctypes_array(list_, datatype):
     return (datatype * len(list_))(*list_)
 

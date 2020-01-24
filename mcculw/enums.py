@@ -915,12 +915,10 @@ class CounterTickSize(IntEnum):
     TICK208PT3ns = 1
     TICK2083PT3ns = 2
     TICK20833PT3ns = 3
-    
-    CTR_TICK20ns = 10      # added for USB-1808 series JTG 1/21/2020
-    CTR_TICK200ns = 11      # added for USB-1808 series JTG 1/21/2020     
-    CTR_TICK2000ns = 12      # added for USB-1808 series JTG 1/21/2020    
-    CTR_TICK20000ns = 13      # added for USB-1808 series JTG 1/21/2020   
-
+    TICK20ns = 10   # added for USB-1808 series JTG 1/21/2020
+    TICK200ns = 11  # added for USB-1808 series JTG 1/21/2020
+    TICK2000ns = 12  # added for USB-1808 series JTG 1/21/2020
+    TICK20000ns = 13  # added for USB-1808 series JTG 1/21/2020
 
 
 class TrigType(IntEnum):
