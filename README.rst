@@ -1,8 +1,7 @@
-======  ===========================================================================================
-Info    Contains a Python API for interacting with Measurement Computing's Universal Library in Windows. See
-        GitHub_ for the latest source.
-Author  Measurement Computing
-======  ===========================================================================================
+===========  ===================================================================================================================================
+Info         Contains a Python API for interacting with Measurement Computing's Universal Library in Windows. See GitHub_ for the latest source.
+Author       Measurement Computing
+===========  ===================================================================================================================================
 
 About
 =====

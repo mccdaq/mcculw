@@ -1,16 +1,13 @@
 # Always prefer setuptools over distutils
-from codecs import open
-from os import path
-
 from setuptools import setup, find_packages
 
 __version__ = '0.9.8'
 
-here = path.abspath(path.dirname(__file__))
 
-# Get the long description from the README file
-with open(path.join(here, 'README.rst'), encoding='utf-8') as f:
-    long_description = f.read()
+def read_contents(file_to_read):
+    with open(file_to_read, 'r') as f:
+        return f.read()
+
 
 setup(
     name='mcculw',
@@ -20,8 +17,8 @@ setup(
     # https://packaging.python.org/en/latest/single_source_version.html
     version=__version__,
 
-    description=('MCC Universal Library Python API for Windows'),
-    long_description=long_description,
+    description='MCC Universal Library Python API for Windows',
+    long_description=read_contents('README.rst'),
 
     # The project's main homepage.
     url='http://www.mccdaq.com',
