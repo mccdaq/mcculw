@@ -1,45 +1,88 @@
+"""
+File:                       DaqSetSetpoints01.py
+
+Library Call Demonstrated:  mcculw.ul.daq_set_setpoints()
+
+Purpose:                    Demonstrate the configuration and usage of
+                            setpoints, including adding the setpoint status to
+                            the scanlist and asynchronous reads of the setpoint
+                            status.
+
+Demonstration:              Continuously displays the input channel data while
+                            monitoring the scan status until the Stop button is
+                            pressed.
+
+Other Library Calls:        mcculw.ul.win_buf_alloc()
+                            mcculw.ul.win_buf_free()
+                            mcculw.ul.daq_in_scan()
+                            mcculw.ul.get_status()
+                            mcculw.ul.to_eng_units()
+                            mcculw.ul.stop_background()
+
+Special Requirements:       Device must support mcculw.ul.daq_set_setpoints().
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
+import tkinter as tk
 from tkinter import messagebox
+from ctypes import cast, POINTER, c_ushort
 
 from mcculw import ul
-from mcculw.enums import ScanOptions, Status, FunctionType, ChannelType, \
-    ULRange, DigitalPortType, SetpointFlag, SetpointOutput
-from examples.ui.uiexample import UIExample
-from examples.props.ai import AnalogInputProps
-from examples.props.counter import CounterProps
-from examples.props.daqi import DaqInputProps
-from examples.props.digital import DigitalProps
+from mcculw.enums import (ScanOptions, Status, FunctionType, ChannelType,
+                          ULRange, DigitalPortType, SetpointFlag, SetpointOutput)
 from mcculw.ul import ULError
-import tkinter as tk
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class DaqSetSetpoints01(UIExample):
     def __init__(self, master=None):
         super(DaqSetSetpoints01, self).__init__(master)
-
+        # By default, the example detects all available devices and selects the
+        # first device listed.
+        # If use_device_detection is set to False, the board_num property needs
+        # to match the desired board number configured with Instacal.
+        use_device_detection = True
         self.board_num = 0
-        self.daqi_props = DaqInputProps(self.board_num)
-
-        example_supported = (self.daqi_props.is_supported
-                             and self.daqi_props.supports_setpoints)
-        if example_supported:
-            self.ai_props = AnalogInputProps(self.board_num)
-            self.digital_props = DigitalProps(self.board_num)
-            self.counter_props = CounterProps(self.board_num)
-            self.init_scan_channel_info()
-            self.init_setpoints()
-
-        self.create_widgets()
-
-    def init_scan_channel_info(self):
-        self.num_chans = 4
 
         self.chan_list = []
         self.chan_type_list = []
         self.gain_list = []
+        self.num_chans = 4
 
+        self.setpoint_flags_list = []
+        self.setpoint_output_list = []
+        self.limit_a_list = []
+        self.limit_b_list = []
+        self.output_1_list = []
+        self.output_2_list = []
+        self.output_mask_1_list = []
+        self.output_mask_2_list = []
+        self.setpoint_count = 3
+
+        try:
+            if use_device_detection:
+                self.configure_first_detected_device()
+
+            self.device_info = DaqDeviceInfo(self.board_num)
+
+            daqi_info = self.device_info.get_daqi_info()
+            if (self.device_info.supports_daq_input
+                    and daqi_info.supports_setpoints):
+                self.init_scan_channel_info()
+                self.init_setpoints()
+                self.create_widgets()
+            else:
+                self.create_unsupported_widgets()
+        except ULError:
+            self.create_unsupported_widgets(True)
+
+    def init_scan_channel_info(self):
         # Add analog input channels
         self.chan_list.append(0)
         self.chan_type_list.append(
@@ -63,17 +106,6 @@ class DaqSetSetpoints01(UIExample):
         self.gain_list.append(ULRange.NOTUSED)
 
     def init_setpoints(self):
-        self.setpoint_count = 3
-
-        self.setpoint_flags_list = []
-        self.setpoint_output_list = []
-        self.limit_a_list = []
-        self.limit_b_list = []
-        self.output_1_list = []
-        self.output_2_list = []
-        self.output_mask_1_list = []
-        self.output_mask_2_list = []
-
         # Setpoint configurations for ChanArray[0] (CH0)
         self.setpoint_flags_list.append(
             SetpointFlag.LESSTHAN_LIMITA + SetpointFlag.UPDATEON_TRUEANDFALSE)
@@ -88,8 +120,8 @@ class DaqSetSetpoints01(UIExample):
         self.output_mask_2_list.append(0)  # Ignored for DAC0 output type
 
         # Setpoint configurations for ChanArray[1] (CH1)
-        self.setpoint_flags_list.append(
-            SetpointFlag.GREATERTHAN_LIMITB + SetpointFlag.UPDATEON_TRUEANDFALSE)
+        self.setpoint_flags_list.append(SetpointFlag.GREATERTHAN_LIMITB
+                                        + SetpointFlag.UPDATEON_TRUEANDFALSE)
         # Setpoint result outputs a value to digital port C
         self.setpoint_output_list.append(SetpointOutput.FIRSTPORTC)
         # Ignored when GreaterThanLimitB flag is used
@@ -136,27 +168,27 @@ class DaqSetSetpoints01(UIExample):
 
         try:
             # Configure the setpoints
-            ul.daq_set_setpoints(
-                self.board_num, self.limit_a_list, self.limit_b_list, self.setpoint_flags_list,
-                self.setpoint_output_list, self.output_1_list, self.output_2_list, self.output_mask_1_list,
-                self.output_mask_2_list, self.setpoint_count)
+            ul.daq_set_setpoints(self.board_num, self.limit_a_list,
+                                 self.limit_b_list, self.setpoint_flags_list,
+                                 self.setpoint_output_list, self.output_1_list,
+                                 self.output_2_list, self.output_mask_1_list,
+                                 self.output_mask_2_list, self.setpoint_count)
 
             # Run the scan
-            ul.daq_in_scan(
-                self.board_num, self.chan_list, self.chan_type_list,
-                self.gain_list, self.num_chans, rate, 0, total_count, self.memhandle,
-                scan_options)
+            ul.daq_in_scan(self.board_num, self.chan_list, self.chan_type_list,
+                           self.gain_list, self.num_chans, rate, 0, total_count,
+                           self.memhandle, scan_options)
 
             # Cast the memhandle to a ctypes pointer
             # Note: the ctypes array will only be valid until win_buf_free
             # is called.
             # A copy of the buffer can be created using win_buf_to_array
             # before the memory is freed. The copy can be used at any time.
-            self.array = self.memhandle_as_ctypes_array(self.memhandle)
+            self.array = cast(self.memhandle, POINTER(c_ushort))
         except ULError as e:
             # Free the allocated memory
             ul.win_buf_free(self.memhandle)
-            self.show_ul_error(e)
+            show_ul_error(e)
             return
 
         # Start updating the displayed values
@@ -215,23 +247,6 @@ class DaqSetSetpoints01(UIExample):
             self.setpoint_status_label["text"] = '0x' + \
                 '{:0<4X}'.format(array[curr_index + 3])
 
-    def recreate_data_frame(self):
-        low_chan = self.low_chan
-        high_chan = self.high_chan
-
-        new_data_frame = tk.Frame(self.inner_data_frame)
-
-        self.chan_labels = []
-        # Add the labels for each channel
-        for chan_num in range(low_chan, high_chan + 1):
-            chan_label = tk.Label(new_data_frame, justify=tk.LEFT, padx=3)
-            chan_label.grid(row=0, column=chan_num - low_chan)
-            self.chan_labels.append(chan_label)
-
-        self.data_frame.destroy()
-        self.data_frame = new_data_frame
-        self.data_frame.grid()
-
     def stop(self):
         ul.stop_background(self.board_num, FunctionType.DAQIFUNCTION)
 
@@ -244,108 +259,84 @@ class DaqSetSetpoints01(UIExample):
         self.start_button["text"] = "Stop"
         self.start_scan()
 
-    def get_low_channel_num(self):
-        try:
-            return int(self.low_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def get_high_channel_num(self):
-        try:
-            return int(self.high_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def validate_channel_entry(self, p):
-        if p == '':
-            return True
-        try:
-            value = int(p)
-            if(value < 0 or value > self.ai_props.num_ai_chans - 1):
-                return False
-        except ValueError:
-            return False
-
-        return True
-
     def create_widgets(self):
         '''Create the tkinter UI'''
-        example_supported = (self.daqi_props.is_supported
-                             and self.daqi_props.supports_setpoints)
+        self.device_label = tk.Label(self)
+        self.device_label.pack(fill=tk.NONE, anchor=tk.NW)
+        self.device_label["text"] = ('Board Number ' + str(self.board_num)
+                                     + ": " + self.device_info.product_name
+                                     + " (" + self.device_info.unique_id + ")")
 
-        if example_supported:
-            main_frame = tk.Frame(self)
-            main_frame.pack(fill=tk.X, anchor=tk.NW)
+        main_frame = tk.Frame(self)
+        main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-            curr_row = 0
-            chan_0_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            chan_0_left_label["text"] = "Channel 0:"
-            chan_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row = 0
+        chan_0_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        chan_0_left_label["text"] = "Channel 0:"
+        chan_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.chan_0_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.chan_0_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.chan_0_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.chan_0_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            chan_1_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            chan_1_left_label["text"] = "Channel 1:"
-            chan_1_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        chan_1_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        chan_1_left_label["text"] = "Channel 1:"
+        chan_1_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.chan_1_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.chan_1_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.chan_1_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.chan_1_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            digital_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            digital_left_label["text"] = "FIRSTPORTA:"
-            digital_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        digital_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        digital_left_label["text"] = "FIRSTPORTA:"
+        digital_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.digital_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.digital_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.digital_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.digital_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            setpoint_status_left_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            setpoint_status_left_label["text"] = "Status:"
-            setpoint_status_left_label.grid(
-                row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        setpoint_status_left_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        setpoint_status_left_label["text"] = "Status:"
+        setpoint_status_left_label.grid(
+            row=curr_row, column=0, sticky=tk.W)
 
-            self.setpoint_status_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            self.setpoint_status_label["text"] = "Idle"
-            self.setpoint_status_label.grid(
-                row=curr_row, column=1, sticky=tk.W)
+        self.setpoint_status_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        self.setpoint_status_label["text"] = "Idle"
+        self.setpoint_status_label.grid(
+            row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            index_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            index_left_label["text"] = "Index:"
-            index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        index_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        index_left_label["text"] = "Index:"
+        index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.index_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.index_label["text"] = "-1"
-            self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.index_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.index_label["text"] = "-1"
+        self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            count_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            count_left_label["text"] = "Count:"
-            count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        count_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        count_left_label["text"] = "Count:"
+        count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.count_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.count_label["text"] = "0"
-            self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.count_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.count_label["text"] = "0"
+        self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            button_frame = tk.Frame(self)
-            button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
+        button_frame = tk.Frame(self)
+        button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
 
-            self.start_button = tk.Button(button_frame)
-            self.start_button["text"] = "Start"
-            self.start_button["command"] = self.start
-            self.start_button.grid(row=0, column=0, padx=3, pady=3)
+        self.start_button = tk.Button(button_frame)
+        self.start_button["text"] = "Start"
+        self.start_button["command"] = self.start
+        self.start_button.grid(row=0, column=0, padx=3, pady=3)
 
-            quit_button = tk.Button(button_frame)
-            quit_button["text"] = "Quit"
-            quit_button["command"] = self.master.destroy
-            quit_button.grid(row=0, column=1, padx=3, pady=3)
-        else:
-            self.create_unsupported_widgets(self.board_num)
+        quit_button = tk.Button(button_frame)
+        quit_button["text"] = "Quit"
+        quit_button["command"] = self.master.destroy
+        quit_button.grid(row=0, column=1, padx=3, pady=3)
 
 
 if __name__ == "__main__":

@@ -1,12 +1,28 @@
+"""
+File:                       ULGT01.py
+
+Library Call Demonstrated:  mcculw.ul.get_err_msg()
+
+Purpose:                    Lookup the error message associated with the
+                            specified error code.
+
+Demonstration:              Displays the error message.
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
+import tkinter as tk
 from tkinter import StringVar
 
 from mcculw import ul
-from examples.ui.uiexample import UIExample
 from mcculw.ul import ULError
-import tkinter as tk
+
+try:
+    from ui_examples_util import (UIExample, show_ul_error,
+                                  validate_positive_int_entry)
+except ImportError:
+    from .ui_examples_util import (UIExample, show_ul_error,
+                                   validate_positive_int_entry)
 
 
 class ULGT01(UIExample):
@@ -25,14 +41,14 @@ class ULGT01(UIExample):
 
             self.err_msg_label["text"] = message
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
 
     def create_widgets(self):
         '''Create the tkinter UI'''
         main_frame = tk.Frame(self)
         main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-        positive_int_vcmd = self.register(self.validate_positive_int_entry)
+        positive_int_vcmd = self.register(validate_positive_int_entry)
 
         err_code_label = tk.Label(main_frame)
         err_code_label["text"] = "Error Code:"

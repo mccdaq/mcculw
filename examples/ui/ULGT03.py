@@ -1,31 +1,49 @@
+"""
+File:                       ULGT03.py
+
+Library Call Demonstrated:  mcculw.device_info package
+
+Purpose:                    Prints a list of all boards installed in
+                            the system and their base addresses.  Also
+                            prints the number of channels for each of the
+                            supported device subsystems.
+
+Other Library Calls:        mcculw.ul.get_config()
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
+import tkinter as tk
 from tkinter import StringVar
 
 from mcculw import ul
-from mcculw.enums import InfoType, GlobalInfo, BoardInfo, DigitalInfo, \
-    ExpansionInfo
-from examples.ui.uiexample import UIExample
+from mcculw.enums import InfoType, GlobalInfo
 from mcculw.ul import ULError
-import tkinter as tk
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, validate_positive_int_entry
+except ImportError:
+    from .ui_examples_util import UIExample, validate_positive_int_entry
 
 
 class ULGT03(UIExample):
     def __init__(self, master):
         super(ULGT03, self).__init__(master)
-
-        self.max_board_num = self.get_max_board_num()
         self.board_num = 0
+
+        self.max_board_num = ul.get_config(InfoType.GLOBALINFO, 0, 0,
+                                           GlobalInfo.NUMBOARDS)
         self.create_widgets()
         self.update_board_info()
 
     def update_board_info(self):
         info_text = ""
 
-        board_type = self.get_board_type()
+        try:
+            # Raises exception is board_num is not valid
+            self.device_info = DaqDeviceInfo(self.board_num)
 
-        if board_type != 0:
             info_text += self.get_ad_info()
             info_text += self.get_temperature_info()
             info_text += self.get_da_info()
@@ -34,117 +52,64 @@ class ULGT03(UIExample):
             info_text += self.get_expansion_info()
             # Remove the last "newline" character
             info_text = info_text[:-1]
-        else:
+        except ULError:
             info_text = (
                 "No board found at board number " + str(self.board_num)
-                + ". Run InstaCal to add or remove boards before running this program.")
-
-        self.info_label["text"] = info_text
-
-    def get_board_type(self):
-        try:
-            return ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.BOARDTYPE)
-        except ULError:
-            return 0
+                + ".\nRun InstaCal to add or remove boards before running this "
+                + "program.")
+        finally:
+            self.info_label["text"] = info_text
 
     def get_ad_info(self):
-        try:
-            num_ad_chans = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.NUMADCHANS)
-            if num_ad_chans > 0:
-                return "Number of A/D channels: " + str(num_ad_chans) + "\n"
-        except ULError:
-            return ""
-
-        return ""
+        result = ''
+        if self.device_info.supports_analog_input:
+            ai_info = self.device_info.get_ai_info()
+            result = ("Number of A/D channels: " + str(ai_info.num_chans)
+                      + "\n")
+        return result
 
     def get_temperature_info(self):
-        try:
-            num_ti_chans = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.NUMTEMPCHANS)
-            if num_ti_chans > 0:
-                return ("Number of temperature channels: "
-                        + str(num_ti_chans) + "\n")
-        except ULError:
-            return ""
-
-        return ""
+        result = ''
+        if self.device_info.supports_temp_input:
+            ai_info = self.device_info.get_ai_info()
+            result = ("Number of Temperature channels: "
+                      + str(ai_info.num_temp_chans) + "\n")
+        return result
 
     def get_da_info(self):
-        try:
-            num_da_chans = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.NUMDACHANS)
-            if num_da_chans > 0:
-                return ("Number of D/A channels: "
-                        + str(num_da_chans) + "\n")
-        except ULError:
-            return ""
-
-        return ""
+        result = ''
+        if self.device_info.supports_analog_output:
+            ao_info = self.device_info.get_ao_info()
+            result = ("Number of D/A channels: " + str(ao_info.num_chans)
+                      + "\n")
+        return result
 
     def get_digital_info(self):
-        try:
-            num_di_ports = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.DINUMDEVS)
-        except ULError:
-            return ""
-        if num_di_ports < 1:
-            return ""
-
-        result = ""
-        for port_num in range(0, num_di_ports):
-            try:
-                num_bits = ul.get_config(
-                    InfoType.DIGITALINFO, self.board_num,
-                    port_num, DigitalInfo.NUMBITS)
-
+        result = ''
+        if self.device_info.supports_digital_io:
+            dio_info = self.device_info.get_dio_info()
+            for port_num in range(len(dio_info.port_info)):
                 result += ("Digital Port #" + str(port_num) + ": "
-                           + str(num_bits) + " bits\n")
-            except ULError:
-                pass
+                           + str(dio_info.port_info[port_num].num_bits)
+                           + " bits\n")
         return result
 
     def get_counter_info(self):
-        try:
-            num_ctr_chans = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.CINUMDEVS)
-            if num_ctr_chans > 0:
-                return ("Number of counter devices: "
-                        + str(num_ctr_chans) + "\n")
-        except ULError:
-            return ""
-
-        return ""
-
-    def get_expansion_info(self):
-        try:
-            num_exps = ul.get_config(
-                InfoType.BOARDINFO, self.board_num, 0, BoardInfo.NUMEXPS)
-        except ULError:
-            return ""
-
-        result = ""
-        for exp_num in range(0, num_exps):
-            try:
-                exp_board_type = ul.get_config(
-                    InfoType.EXPANSIONINFO, self.board_num, exp_num,
-                    ExpansionInfo.BOARDTYPE)
-                exp_mux_first_chan = ul.get_config(
-                    InfoType.EXPANSIONINFO, self.board_num, exp_num,
-                    ExpansionInfo.MUX_AD_CHAN1)
-
-                result += (
-                    "A/D channel " + str(exp_mux_first_chan) +
-                    " connected to EXP (device ID=" + str(exp_board_type) + ").\n")
-            except ULError:
-                pass
-
+        result = ''
+        if self.device_info.supports_counters:
+            ctr_info = self.device_info.get_ctr_info()
+            result = ("Number of counter devices: " + str(ctr_info.num_chans)
+                      + "\n")
         return result
 
-    def get_max_board_num(self):
-        return ul.get_config(
-            InfoType.GLOBALINFO, 0, 0, GlobalInfo.NUMBOARDS)
+    def get_expansion_info(self):
+        result = ''
+        if self.device_info.num_expansions > 0:
+            for exp_info in self.device_info.exp_info:
+                result += ("A/D channel " + str(exp_info.mux_ad_chan)
+                           + " connected to EXP (device ID="
+                           + str(exp_info.board_type) + ").\n")
+        return result
 
     def board_num_changed(self, *args):
         try:
@@ -158,7 +123,7 @@ class ULGT03(UIExample):
         main_frame = tk.Frame(self)
         main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-        positive_int_vcmd = self.register(self.validate_positive_int_entry)
+        positive_int_vcmd = self.register(validate_positive_int_entry)
 
         board_num_label = tk.Label(main_frame)
         board_num_label["text"] = "Board Number:"

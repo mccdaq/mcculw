@@ -1,25 +1,64 @@
-from __future__ import absolute_import, division, print_function
+"""
+File:                       ULAI06.py
 
+Library Call Demonstrated:  mcculw.ul.a_in_scan(), continuous background mode
+
+Purpose:                    Scans a range of A/D Input Channels continuously
+                            in the background and stores the data in an array.
+
+Demonstration:              Continuously collects data on up to eight channels.
+
+Other Library Calls:        mcculw.ul.win_buf_alloc()
+                                or mcculw.ul.win_buf_alloc_32
+                            mcculw.ul.win_buf_free()
+                            mcculw.ul.to_eng_units()
+                                or mcculw.ul.to_eng_units_32()
+                            mcculw.ul.get_status()
+                            mcculw.ul.stop_background()
+
+Special Requirements:       Device must have an A/D converter.
+                            Analog signals on up to eight input channels.
+"""
+from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
+
+import tkinter as tk
 from tkinter import messagebox
+from ctypes import cast, POINTER, c_ushort, c_ulong
 
 from mcculw import ul
 from mcculw.enums import ScanOptions, Status, FunctionType
-from examples.props.ai import AnalogInputProps
-from examples.ui.uiexample import UIExample
 from mcculw.ul import ULError
-import tkinter as tk
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class ULAI06(UIExample):
     def __init__(self, master=None):
         super(ULAI06, self).__init__(master)
-
+        # By default, the example detects all available devices and selects the
+        # first device listed.
+        # If use_device_detection is set to False, the board_num property needs
+        # to match the desired board number configured with Instacal.
+        use_device_detection = True
         self.board_num = 0
-        self.ai_props = AnalogInputProps(self.board_num)
 
-        # Initialize tkinter
-        self.create_widgets()
+        try:
+            if use_device_detection:
+                self.configure_first_detected_device()
+
+            self.device_info = DaqDeviceInfo(self.board_num)
+            self.ai_info = self.device_info.get_ai_info()
+            if self.ai_info.is_supported:
+                self.create_widgets()
+            else:
+                self.create_unsupported_widgets()
+        except ULError:
+            self.create_unsupported_widgets(True)
 
     def start_scan(self):
         self.low_chan = self.get_low_channel_num()
@@ -41,18 +80,18 @@ class ULAI06(UIExample):
         # of the packet size. For this case, calculate a points_per_channel
         # that is equal to or just above the points_per_channel selected
         # which matches that requirement.
-        if self.ai_props.continuous_requires_packet_size_multiple:
-            packet_size = self.ai_props.packet_size
+        if self.ai_info.packet_size != 1:
+            packet_size = self.ai_info.packet_size
             remainder = points_per_channel % packet_size
             if remainder != 0:
                 points_per_channel += packet_size - remainder
 
         total_count = points_per_channel * self.num_chans
-        range_ = self.ai_props.available_ranges[0]
+        ai_range = self.ai_info.supported_ranges[0]
         scan_options = ScanOptions.BACKGROUND | ScanOptions.CONTINUOUS
 
         # Allocate a buffer for the scan
-        if self.ai_props.resolution <= 16:
+        if self.ai_info.resolution <= 16:
             # Use the win_buf_alloc method for devices with a resolution <=
             # 16
             self.memhandle = ul.win_buf_alloc(total_count)
@@ -71,11 +110,11 @@ class ULAI06(UIExample):
 
         try:
             # Run the scan
-            ul.a_in_scan(
-                self.board_num, self.low_chan, self.high_chan, total_count,
-                rate, range_, self.memhandle, scan_options)
+            ul.a_in_scan(self.board_num, self.low_chan, self.high_chan,
+                         total_count, rate, ai_range, self.memhandle,
+                         scan_options)
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
             self.set_ui_idle_state()
             return
 
@@ -85,34 +124,32 @@ class ULAI06(UIExample):
         # A copy of the buffer can be created using win_buf_to_array
         # or win_buf_to_array_32 before the memory is freed. The copy can
         # be used at any time.
-        if self.ai_props.resolution <= 16:
+        if self.ai_info.resolution <= 16:
             # Use the memhandle_as_ctypes_array method for devices with a
             # resolution <= 16
-            self.ctypes_array = self.memhandle_as_ctypes_array(
-                self.memhandle)
+            self.ctypes_array = cast(self.memhandle, POINTER(c_ushort))
         else:
             # Use the memhandle_as_ctypes_array_32 method for devices with a
             # resolution > 16
-            self.ctypes_array = self.memhandle_as_ctypes_array_32(
-                self.memhandle)
+            self.ctypes_array = cast(self.memhandle, POINTER(c_ulong))
 
         # Start updating the displayed values
-        self.update_displayed_values(range_)
+        self.update_displayed_values(ai_range)
 
-    def update_displayed_values(self, range_):
+    def update_displayed_values(self, ai_range):
         # Get the status from the device
-        status, curr_count, curr_index = ul.get_status(
-            self.board_num, FunctionType.AIFUNCTION)
+        status, curr_count, curr_index = ul.get_status(self.board_num,
+                                                       FunctionType.AIFUNCTION)
 
         # Display the status info
         self.update_status_labels(status, curr_count, curr_index)
 
         # Display the values
-        self.display_values(range_, curr_index, curr_count)
+        self.display_values(ai_range, curr_index, curr_count)
 
         # Call this method again until the stop button is pressed
         if status == Status.RUNNING:
-            self.after(100, self.update_displayed_values, range_)
+            self.after(100, self.update_displayed_values, ai_range)
         else:
             # Free the allocated memory
             ul.win_buf_free(self.memhandle)
@@ -156,7 +193,7 @@ class ULAI06(UIExample):
                     first_index + min(
                         chan_count * per_channel_display_count,
                         curr_count)):
-                if self.ai_props.resolution <= 16:
+                if self.ai_info.resolution <= 16:
                     eng_value = ul.to_eng_units(
                         self.board_num, range_, array[data_index])
                 else:
@@ -208,7 +245,7 @@ class ULAI06(UIExample):
         self.start_scan()
 
     def get_low_channel_num(self):
-        if self.ai_props.num_ai_chans == 1:
+        if self.ai_info.num_chans == 1:
             return 0
         try:
             return int(self.low_channel_entry.get())
@@ -216,7 +253,7 @@ class ULAI06(UIExample):
             return 0
 
     def get_high_channel_num(self):
-        if self.ai_props.num_ai_chans == 1:
+        if self.ai_info.num_chans == 1:
             return 0
         try:
             return int(self.high_channel_entry.get())
@@ -228,7 +265,7 @@ class ULAI06(UIExample):
             return True
         try:
             value = int(p)
-            if(value < 0 or value > self.ai_props.num_ai_chans - 1):
+            if value < 0 or value > self.ai_info.num_chans - 1:
                 return False
         except ValueError:
             return False
@@ -237,14 +274,17 @@ class ULAI06(UIExample):
 
     def create_widgets(self):
         '''Create the tkinter UI'''
+        self.device_label = tk.Label(self)
+        self.device_label.pack(fill=tk.NONE, anchor=tk.NW)
+        self.device_label["text"] = ('Board Number ' + str(self.board_num)
+                                     + ": " + self.device_info.product_name
+                                     + " (" + self.device_info.unique_id + ")")
 
         main_frame = tk.Frame(self)
         main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-        channel_vcmd = self.register(self.validate_channel_entry)
-
         curr_row = 0
-        if self.ai_props.num_ai_chans > 1:
+        if self.ai_info.num_chans > 1:
             channel_vcmd = self.register(self.validate_channel_entry)
 
             low_channel_entry_label = tk.Label(main_frame)
@@ -254,7 +294,7 @@ class ULAI06(UIExample):
 
             self.low_channel_entry = tk.Spinbox(
                 main_frame, from_=0,
-                to=max(self.ai_props.num_ai_chans - 1, 0),
+                to=max(self.ai_info.num_chans - 1, 0),
                 validate='key', validatecommand=(channel_vcmd, '%P'))
             self.low_channel_entry.grid(
                 row=curr_row, column=1, sticky=tk.W)
@@ -267,11 +307,11 @@ class ULAI06(UIExample):
 
             self.high_channel_entry = tk.Spinbox(
                 main_frame, from_=0, validate='key',
-                to=max(self.ai_props.num_ai_chans - 1, 0),
+                to=max(self.ai_info.num_chans - 1, 0),
                 validatecommand=(channel_vcmd, '%P'))
             self.high_channel_entry.grid(
                 row=curr_row, column=1, sticky=tk.W)
-            initial_value = min(self.ai_props.num_ai_chans - 1, 3)
+            initial_value = min(self.ai_info.num_chans - 1, 3)
             self.high_channel_entry.delete(0, tk.END)
             self.high_channel_entry.insert(0, str(initial_value))
 

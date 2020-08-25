@@ -1,10 +1,33 @@
+"""
+File:                       DaqDevDiscovery02.py
+
+Library Call Demonstrated:  mcculw.ul.get_net_device_descriptor()
+                            mcculw.ul.create_daq_device()
+                            mcculw.ul.release_daq_device()
+
+Purpose:                    Discovers a Network DAQ device and assigns board
+                            number to the detected device.
+
+Demonstration:              Displays the detected DAQ device and flashes the
+                            LED of the selected device.
+
+Other Library Calls:        mcculw.ul.ignore_instacal()
+                            mcculw.ul.flash_led()
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
-from mcculw import ul
-from examples.ui.uiexample import UIExample
-from mcculw.ul import ULError
 import tkinter as tk
+
+from mcculw import ul
+from mcculw.ul import ULError
+
+try:
+    from ui_examples_util import (UIExample, show_ul_error,
+                                  validate_positive_int_entry)
+except ImportError:
+    from .ui_examples_util import (UIExample, show_ul_error,
+                                   validate_positive_int_entry)
 
 
 class DaqDevDiscovery02(UIExample):
@@ -29,7 +52,7 @@ class DaqDevDiscovery02(UIExample):
                 self.device_created = False
 
             descriptor = ul.get_net_device_descriptor(host, port, timeout_ms)
-            if descriptor != None:
+            if descriptor is not None:
                 # Create the DAQ device from the descriptor
                 ul.create_daq_device(self.board_num, descriptor)
                 self.device_created = True
@@ -49,14 +72,14 @@ class DaqDevDiscovery02(UIExample):
             self.flash_led_button["state"] = "disabled"
             self.device_name_label["text"] = ""
             self.device_id_label["text"] = ""
-            self.show_ul_error(e)
+            show_ul_error(e)
 
     def flash_led(self):
         try:
             # Flash the device LED
             ul.flash_led(self.board_num)
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
 
     def get_port(self):
         try:
@@ -64,19 +87,12 @@ class DaqDevDiscovery02(UIExample):
         except ValueError:
             return 0
 
-    def update_selected_device_id(self, *args):
-        selected_index = self.devices_combobox.current()
-        inventory_count = len(self.inventory)
-        if inventory_count > 0 and selected_index < inventory_count:
-            descriptor = self.inventory[selected_index]
-            self.device_id_label["text"] = descriptor.UniqueID
-
     def create_widgets(self):
         '''Create the tkinter UI'''
         main_frame = tk.Frame(self)
         main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-        positive_int_vcmd = self.register(self.validate_positive_int_entry)
+        positive_int_vcmd = self.register(validate_positive_int_entry)
 
         settings_grid_frame = tk.Frame(main_frame)
         settings_grid_frame.pack(anchor=tk.NW)

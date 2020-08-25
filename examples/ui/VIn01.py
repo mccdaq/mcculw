@@ -1,25 +1,56 @@
-from __future__ import absolute_import, division, print_function
+"""
+File:                       VIn01.py
 
+Library Call Demonstrated:  mcculw.ul.v_in() or mcculw.ul.v_in_32
+
+Purpose:                    Reads an A/D Input Channel.
+
+Demonstration:              Displays the voltage input on a user-specified
+                            channel.
+
+Special Requirements:       Device must have an A/D converter.
+                            Analog signal on an input channel.
+"""
+from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
-from mcculw import ul
-from mcculw.ul import ULError
+
+import tkinter as tk
 from tkinter.ttk import Combobox  # @UnresolvedImport
 
-from examples.props.ai import AnalogInputProps
-from examples.ui.uiexample import UIExample
-import tkinter as tk
+from mcculw import ul
+from mcculw.ul import ULError
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class VIn01(UIExample):
     def __init__(self, master):
         super(VIn01, self).__init__(master)
-
+        # By default, the example detects all available devices and selects the
+        # first device listed.
+        # If use_device_detection is set to False, the board_num property needs
+        # to match the desired board number configured with Instacal.
+        use_device_detection = True
         self.board_num = 0
-        self.ai_props = AnalogInputProps(self.board_num)
 
         self.running = False
 
-        self.create_widgets()
+        try:
+            if use_device_detection:
+                self.configure_first_detected_device()
+
+            self.device_info = DaqDeviceInfo(self.board_num)
+            self.ai_info = self.device_info.get_ai_info()
+            if self.ai_info.is_supported and self.ai_info.supports_v_in:
+                self.create_widgets()
+            else:
+                self.create_unsupported_widgets()
+        except ULError:
+            self.create_unsupported_widgets(True)
 
     def update_value(self):
         channel = self.get_channel_num()
@@ -27,7 +58,7 @@ class VIn01(UIExample):
 
         try:
             # Get a value from the device
-            if self.ai_props.resolution <= 16:
+            if self.ai_info.resolution <= 16:
                 # Use the v_in method for devices with a resolution <= 16
                 # (optional parameter omitted)
                 value = ul.v_in(self.board_num, channel, ai_range)
@@ -45,7 +76,7 @@ class VIn01(UIExample):
                 self.after(100, self.update_value)
         except ULError as e:
             self.stop()
-            self.show_ul_error(e)
+            show_ul_error(e)
 
     def stop(self):
         self.running = False
@@ -60,7 +91,7 @@ class VIn01(UIExample):
 
     def get_range(self):
         selected_index = self.range_combobox.current()
-        return self.ai_props.available_ranges[selected_index]
+        return self.ai_info.supported_ranges[selected_index]
 
     def get_channel_num(self):
         try:
@@ -73,7 +104,7 @@ class VIn01(UIExample):
             return True
         try:
             value = int(p)
-            if(value < 0 or value > self.ai_props.num_ai_chans - 1):
+            if value < 0 or value > self.ai_info.num_chans - 1:
                 return False
         except ValueError:
             return False
@@ -82,61 +113,61 @@ class VIn01(UIExample):
 
     def create_widgets(self):
         '''Create the tkinter UI'''
-        example_supported = (
-            self.ai_props.num_ai_chans > 0 and self.ai_props.supports_v_in)
+        self.device_label = tk.Label(self)
+        self.device_label.pack(fill=tk.NONE, anchor=tk.NW)
+        self.device_label["text"] = ('Board Number ' + str(self.board_num)
+                                     + ": " + self.device_info.product_name
+                                     + " (" + self.device_info.unique_id + ")")
 
-        if example_supported:
-            main_frame = tk.Frame(self)
-            main_frame.pack(fill=tk.X, anchor=tk.NW)
+        main_frame = tk.Frame(self)
+        main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-            channel_vcmd = self.register(self.validate_channel_entry)
+        channel_vcmd = self.register(self.validate_channel_entry)
 
-            curr_row = 0
-            channel_entry_label = tk.Label(main_frame)
-            channel_entry_label["text"] = "Channel Number:"
-            channel_entry_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row = 0
+        channel_entry_label = tk.Label(main_frame)
+        channel_entry_label["text"] = "Channel Number:"
+        channel_entry_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.channel_entry = tk.Spinbox(
-                main_frame, from_=0,
-                to=max(self.ai_props.num_ai_chans - 1, 0),
-                validate='key', validatecommand=(channel_vcmd, '%P'))
-            self.channel_entry.grid(row=curr_row, column=1, sticky=tk.W)
+        self.channel_entry = tk.Spinbox(
+            main_frame, from_=0,
+            to=max(self.ai_info.num_chans - 1, 0),
+            validate='key', validatecommand=(channel_vcmd, '%P'))
+        self.channel_entry.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            range_label = tk.Label(main_frame)
-            range_label["text"] = "Range:"
-            range_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        range_label = tk.Label(main_frame)
+        range_label["text"] = "Range:"
+        range_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.range_combobox = Combobox(main_frame)
-            self.range_combobox["state"] = "readonly"
-            self.range_combobox["values"] = [
-                x.name for x in self.ai_props.available_ranges]
-            self.range_combobox.current(0)
-            self.range_combobox.grid(row=curr_row, column=1, padx=3, pady=3)
+        self.range_combobox = Combobox(main_frame)
+        self.range_combobox["state"] = "readonly"
+        self.range_combobox["values"] = [
+            x.name for x in self.ai_info.supported_ranges]
+        self.range_combobox.current(0)
+        self.range_combobox.grid(row=curr_row, column=1, padx=3, pady=3)
 
-            curr_row += 1
-            value_left_label = tk.Label(main_frame)
-            value_left_label["text"] = (
-                "Value read from selected channel (V):")
-            value_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        value_left_label = tk.Label(main_frame)
+        value_left_label["text"] = (
+            "Value read from selected channel (V):")
+        value_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.value_label = tk.Label(main_frame)
-            self.value_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.value_label = tk.Label(main_frame)
+        self.value_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            button_frame = tk.Frame(self)
-            button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
+        button_frame = tk.Frame(self)
+        button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
 
-            self.start_button = tk.Button(button_frame)
-            self.start_button["text"] = "Start"
-            self.start_button["command"] = self.start
-            self.start_button.grid(row=0, column=0, padx=3, pady=3)
+        self.start_button = tk.Button(button_frame)
+        self.start_button["text"] = "Start"
+        self.start_button["command"] = self.start
+        self.start_button.grid(row=0, column=0, padx=3, pady=3)
 
-            quit_button = tk.Button(button_frame)
-            quit_button["text"] = "Quit"
-            quit_button["command"] = self.master.destroy
-            quit_button.grid(row=0, column=1, padx=3, pady=3)
-        else:
-            self.create_unsupported_widgets(self.board_num)
+        quit_button = tk.Button(button_frame)
+        quit_button["text"] = "Quit"
+        quit_button["command"] = self.master.destroy
+        quit_button.grid(row=0, column=1, padx=3, pady=3)
 
 
 # Start the example if this module is being run

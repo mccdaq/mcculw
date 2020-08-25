@@ -1,47 +1,81 @@
+"""
+File:                       DaqOutScan01.py
+
+Library Call Demonstrated:  mcculw.ul.daq_out_scan()
+
+Purpose:                    Synchronously writes to an analog channel and a
+                            digital port in the background (if each is
+                            available).
+
+Demonstration:              Sends output to the analog and digital channels if
+                            available.
+
+Other Library Calls:        mcculw.ul.win_buf_alloc()
+                            mcculw.ul.win_buf_free()
+                            mcculw.ul.d_config_port()
+                            mcculw.ul.from_eng_units()
+                            mcculw.ul.get_status()
+                            mcculw.ul.stop_background()
+
+Special Requirements:       Device must support mcculw.ul.daq_out_scan().
+"""
 from __future__ import absolute_import, division, print_function
+from builtins import *  # @UnusedWildImport
 
 import math
-
-from builtins import *  # @UnusedWildImport
+import tkinter as tk
 from tkinter import messagebox
+from ctypes import cast, POINTER, c_ushort
 
 from mcculw import ul
-from mcculw.enums import Status, FunctionType, ScanOptions, ChannelType, \
-    ULRange, DigitalIODirection
-from examples.ui.uiexample import UIExample
-from examples.props.ao import AnalogOutputProps
-from examples.props.daqo import DaqOutputProps
-from examples.props.digital import DigitalProps
+from mcculw.enums import (Status, FunctionType, ScanOptions, ChannelType,
+                          ULRange, DigitalIODirection)
 from mcculw.ul import ULError
-import tkinter as tk
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class DaqOutScan01(UIExample):
     def __init__(self, master=None):
         super(DaqOutScan01, self).__init__(master)
-
+        # By default, the example detects all available devices and selects the
+        # first device listed.
+        # If use_device_detection is set to False, the board_num property needs
+        # to match the desired board number configured with Instacal.
+        use_device_detection = True
         self.board_num = 0
-        self.daqo_props = DaqOutputProps(self.board_num)
-        if self.daqo_props.is_supported:
-            self.ao_props = AnalogOutputProps(self.board_num)
-            self.digital_props = DigitalProps(self.board_num)
-            self.init_scan_channel_info()
 
-        self.create_widgets()
-
-    def init_scan_channel_info(self):
         self.num_chans = 2
-
         self.chan_list = []
         self.chan_type_list = []
         self.gain_list = []
 
-        supported_channel_types = self.daqo_props.supported_channel_types
+        try:
+            if use_device_detection:
+                self.configure_first_detected_device()
+
+            self.device_info = DaqDeviceInfo(self.board_num)
+            if self.device_info.supports_daq_output:
+                self.ao_info = self.device_info.get_ao_info()
+                self.init_scan_channel_info()
+                self.create_widgets()
+            else:
+                self.create_unsupported_widgets()
+        except ULError:
+            self.create_unsupported_widgets(True)
+
+    def init_scan_channel_info(self):
+        daqo_info = self.device_info.get_daqo_info()
+        supported_channel_types = daqo_info.supported_channel_types
 
         # Add an analog output channel
         self.chan_list.append(0)
         self.chan_type_list.append(ChannelType.ANALOG)
-        self.gain_list.append(self.ao_props.available_ranges[0])
+        self.gain_list.append(self.ao_info.supported_ranges[0])
 
         # Add a digital output channel
         if ChannelType.DIGITAL16 in supported_channel_types:
@@ -51,17 +85,17 @@ class DaqOutScan01(UIExample):
         else:
             chan_type = ChannelType.DIGITAL
 
-        port_info = self.digital_props.port_info[0]
+        dio_info = self.device_info.get_dio_info()
+        port_info = dio_info.port_info[0]
         self.chan_list.append(port_info.type)
         self.chan_type_list.append(chan_type)
         self.gain_list.append(ULRange.NOTUSED)
 
         # Configure all digital ports for output
-        for port in self.digital_props.port_info:
+        for port in dio_info.port_info:
             if port.is_port_configurable:
-                ul.d_config_port(
-                    self.board_num, port.type,
-                    DigitalIODirection.OUT)
+                ul.d_config_port(self.board_num, port.type,
+                                 DigitalIODirection.OUT)
 
     def start_scan(self):
         # Build the data array
@@ -69,7 +103,7 @@ class DaqOutScan01(UIExample):
         rate = 1000
         num_points = self.num_chans * points_per_channel
         scan_options = ScanOptions.BACKGROUND | ScanOptions.CONTINUOUS
-        ao_range = self.ao_props.available_ranges[0]
+        ao_range = self.ao_info.supported_ranges[0]
 
         self.memhandle = ul.win_buf_alloc(num_points)
         # Check if the buffer was successfully allocated
@@ -79,26 +113,21 @@ class DaqOutScan01(UIExample):
             return
 
         try:
-            data_array = self.memhandle_as_ctypes_array(self.memhandle)
-            freq = self.add_example_data(
-                data_array, ao_range, rate, points_per_channel)
+            data_array = cast(self.memhandle, POINTER(c_ushort))
+            freq = self.add_example_data(data_array, ao_range, rate,
+                                         points_per_channel)
             self.freq_label["text"] = str(freq) + "Hz"
 
-            ul.daq_out_scan(
-                self.board_num, self.chan_list, self.chan_type_list, self.gain_list,
-                self.num_chans, rate, num_points, self.memhandle, scan_options)
+            ul.daq_out_scan(self.board_num, self.chan_list, self.chan_type_list,
+                            self.gain_list, self.num_chans, rate, num_points,
+                            self.memhandle, scan_options)
 
             # Start updating the displayed values
             self.update_displayed_values()
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
             self.set_ui_idle_state()
             return
-
-    def display_signal_info(self, frequencies):
-        for channel_num in range(0, min(self.ao_props.num_chans, 4)):
-            self.freq_labels[channel_num]["text"] = str(
-                frequencies[channel_num]) + " Hz"
 
     def add_example_data(self, data_array, ao_range, rate, points_per_channel):
         # Calculate a frequency that will work well with the size of the array
@@ -109,8 +138,8 @@ class DaqOutScan01(UIExample):
         amplitude = (ao_range.range_max - ao_range.range_min) / 2
         y_offset = (amplitude + ao_range.range_min) / 2
 
-        # Fill the array with sine wave data for the analog channel, and square wave data for all bits
-        # on the digital port.
+        # Fill the array with sine wave data for the analog channel, and square
+        # wave data for all bits on the digital port.
         data_index = 0
         for point_num in range(0, points_per_channel):
             # Generate a value in volts for output from the analog channel
@@ -156,23 +185,6 @@ class DaqOutScan01(UIExample):
         self.index_label["text"] = str(curr_index)
         self.count_label["text"] = str(curr_count)
 
-    def recreate_data_frame(self):
-        low_chan = self.low_chan
-        high_chan = self.high_chan
-
-        new_data_frame = tk.Frame(self.inner_data_frame)
-
-        self.chan_labels = []
-        # Add the labels for each channel
-        for chan_num in range(low_chan, high_chan + 1):
-            chan_label = tk.Label(new_data_frame, justify=tk.LEFT, padx=3)
-            chan_label.grid(row=0, column=chan_num - low_chan)
-            self.chan_labels.append(chan_label)
-
-        self.data_frame.destroy()
-        self.data_frame = new_data_frame
-        self.data_frame.grid()
-
     def stop(self):
         ul.stop_background(self.board_num, FunctionType.DAQOFUNCTION)
 
@@ -189,90 +201,67 @@ class DaqOutScan01(UIExample):
         self.start_button["text"] = "Stop"
         self.start_scan()
 
-    def get_low_channel_num(self):
-        try:
-            return int(self.low_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def get_high_channel_num(self):
-        try:
-            return int(self.high_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def validate_channel_entry(self, p):
-        if p == '':
-            return True
-        try:
-            value = int(p)
-            if(value < 0 or value > self.ai_props.num_chans - 1):
-                return False
-        except ValueError:
-            return False
-
-        return True
-
     def create_widgets(self):
         '''Create the tkinter UI'''
-        example_supported = self.daqo_props.is_supported
+        self.device_label = tk.Label(self)
+        self.device_label.pack(fill=tk.NONE, anchor=tk.NW)
+        self.device_label["text"] = ('Board Number ' + str(self.board_num)
+                                     + ": " + self.device_info.product_name
+                                     + " (" + self.device_info.unique_id + ")")
 
-        if example_supported:
-            main_frame = tk.Frame(self)
-            main_frame.pack(fill=tk.X, anchor=tk.NW)
+        main_frame = tk.Frame(self)
+        main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-            results_frame = tk.Frame(main_frame)
-            results_frame.pack(fill=tk.X, anchor=tk.NW)
+        results_frame = tk.Frame(main_frame)
+        results_frame.pack(fill=tk.X, anchor=tk.NW)
 
-            curr_row = 0
-            status_left_label = tk.Label(results_frame)
-            status_left_label["text"] = "Status:"
-            status_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row = 0
+        status_left_label = tk.Label(results_frame)
+        status_left_label["text"] = "Status:"
+        status_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.status_label = tk.Label(results_frame)
-            self.status_label["text"] = "Idle"
-            self.status_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.status_label = tk.Label(results_frame)
+        self.status_label["text"] = "Idle"
+        self.status_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            index_left_label = tk.Label(results_frame)
-            index_left_label["text"] = "Index:"
-            index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        index_left_label = tk.Label(results_frame)
+        index_left_label["text"] = "Index:"
+        index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.index_label = tk.Label(results_frame)
-            self.index_label["text"] = "-1"
-            self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.index_label = tk.Label(results_frame)
+        self.index_label["text"] = "-1"
+        self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            count_left_label = tk.Label(results_frame)
-            count_left_label["text"] = "Count:"
-            count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        count_left_label = tk.Label(results_frame)
+        count_left_label["text"] = "Count:"
+        count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.count_label = tk.Label(results_frame)
-            self.count_label["text"] = "0"
-            self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.count_label = tk.Label(results_frame)
+        self.count_label["text"] = "0"
+        self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            curr_row += 1
-            freq_left_label = tk.Label(results_frame)
-            freq_left_label["text"] = "Frequency:"
-            freq_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        curr_row += 1
+        freq_left_label = tk.Label(results_frame)
+        freq_left_label["text"] = "Frequency:"
+        freq_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            self.freq_label = tk.Label(results_frame)
-            self.freq_label.grid(row=curr_row, column=1, sticky=tk.W)
+        self.freq_label = tk.Label(results_frame)
+        self.freq_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            button_frame = tk.Frame(self)
-            button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
+        button_frame = tk.Frame(self)
+        button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
 
-            self.start_button = tk.Button(button_frame)
-            self.start_button["text"] = "Start"
-            self.start_button["command"] = self.start
-            self.start_button.grid(row=0, column=0, padx=3, pady=3)
+        self.start_button = tk.Button(button_frame)
+        self.start_button["text"] = "Start"
+        self.start_button["command"] = self.start
+        self.start_button.grid(row=0, column=0, padx=3, pady=3)
 
-            quit_button = tk.Button(button_frame)
-            quit_button["text"] = "Quit"
-            quit_button["command"] = self.exit
-            quit_button.grid(row=0, column=1, padx=3, pady=3)
-        else:
-            self.create_unsupported_widgets(self.board_num)
+        quit_button = tk.Button(button_frame)
+        quit_button["text"] = "Quit"
+        quit_button["command"] = self.exit
+        quit_button.grid(row=0, column=1, padx=3, pady=3)
 
 
 if __name__ == "__main__":

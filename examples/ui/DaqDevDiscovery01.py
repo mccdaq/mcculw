@@ -1,14 +1,34 @@
-from __future__ import absolute_import, division, print_function
+"""
+File:                       DaqDevDiscovery01.py
 
+Library Call Demonstrated:  mcculw.ul.get_daq_device_inventory()
+                            mcculw.ul.create_daq_device()
+                            mcculw.ul.release_daq_device()
+
+Purpose:                    Discovers DAQ devices and assigns board number to
+                            the detected devices.
+
+Demonstration:              Displays the detected DAQ devices and flashes the
+                            LED of the selected device.
+
+Other Library Calls:        mcculw.ul.ignore_instacal()
+                            mcculw.ul.flash_led()
+"""
+from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
-from mcculw import ul
-from mcculw.enums import InterfaceType
-from mcculw.ul import ULError
+
+import tkinter as tk
 from tkinter import StringVar
 from tkinter.ttk import Combobox  # @UnresolvedImport
 
-from examples.ui.uiexample import UIExample
-import tkinter as tk
+from mcculw import ul
+from mcculw.enums import InterfaceType
+from mcculw.ul import ULError
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class DaqDevDiscovery01(UIExample):
@@ -45,14 +65,12 @@ class DaqDevDiscovery01(UIExample):
             self.devices_combobox["state"] = "disabled"
             self.flash_led_button["state"] = "disabled"
 
-        self.update_selected_device_id()
-
     def flash_led(self):
         try:
             # Flash the device LED
             ul.flash_led(self.board_num)
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
 
     def selected_device_changed(self, *args):  # @UnusedVariable
         selected_index = self.devices_combobox.current()

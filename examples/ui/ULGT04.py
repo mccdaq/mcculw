@@ -1,34 +1,52 @@
+"""
+File:                       ULGT04.py
+
+Library Call Demonstrated:  mcculw.get_board_name()
+
+Purpose:                    Lists board names of boards installed or supported
+                            by Universal Library.
+
+Demonstration:              Displays the board names of all boards configured
+                            with Instacal when the List Installed button is
+                            clicked. Lists all boards supported by the base
+                            Universal Library when the List Supported button is
+                            clicked. Note that this does not necessarily reflect
+                            the boards supported by the mcculw Python layer.
+
+Other Library Calls:        mcculw.ul.get_config()
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
-from mcculw import ul
-from mcculw.enums import InfoType, GlobalInfo, BoardInfo, Iterator
-from examples.ui.uiexample import UIExample
-from mcculw.ul import ULError
 import tkinter as tk
+
+from mcculw import ul
+from mcculw.enums import InfoType, GlobalInfo, Iterator
+from mcculw.ul import ULError
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class ULGT04(UIExample):
     def __init__(self, master):
         super(ULGT04, self).__init__(master)
 
-        self.max_board_num = self.get_max_board_num()
+        self.max_board_num = ul.get_config(InfoType.GLOBALINFO, 0, 0,
+                                           GlobalInfo.NUMBOARDS)
         self.create_widgets()
         self.list_installed()
-
-    def get_max_board_num(self):
-        return ul.get_config(
-            InfoType.GLOBALINFO, 0, 0, GlobalInfo.NUMBOARDS)
 
     def list_installed(self):
         installed_text = ""
         for board_num in range(0, self.max_board_num):
             try:
-                board_type = self.get_board_type(board_num)
-                board_name = ul.get_board_name(board_num)
-                if board_type != 0:
-                    installed_text += (
-                        "Board #" + str(board_num) + " = " + board_name + "\n")
+                device_info = DaqDeviceInfo(board_num)
+                installed_text += ("Board #" + str(board_num) + " = "
+                                   + device_info.product_name + "\n")
             except ULError:
                 pass
 
@@ -37,16 +55,15 @@ class ULGT04(UIExample):
         self.info_text.insert(0.0, installed_text[:-1])
 
     def list_supported(self):
-        supported_text = (
-            "Note: this lists all boards supported by the base"
-            + " Universal Library, and does not necessarily reflect those supported"
-            + " by the Python layer.\n\n")
+        supported_text = ("Note: this lists all boards supported by the base "
+                          "Universal Library, and does not necessarily reflect "
+                          "those supported by the Python layer.\n\n")
 
         try:
             board_name = ul.get_board_name(Iterator.GET_FIRST)
             supported_text += board_name + "\n"
         except ULError as e:
-            self.show_ul_error(e)
+            show_ul_error(e)
             return
 
         while len(board_name) > 3:
@@ -54,19 +71,12 @@ class ULGT04(UIExample):
                 board_name = ul.get_board_name(Iterator.GET_NEXT)
                 supported_text += board_name + "\n"
             except ULError as e:
-                self.show_ul_error(e)
+                show_ul_error(e)
                 return
 
         self.info_groupbox["text"] = "Supported Devices"
         self.info_text.delete(0.0, tk.END)
         self.info_text.insert(0.0, supported_text[:-1])
-
-    def get_board_type(self, board_num):
-        try:
-            return ul.get_config(
-                InfoType.BOARDINFO, board_num, 0, BoardInfo.BOARDTYPE)
-        except ULError:
-            return 0
 
     def create_widgets(self):
         '''Create the tkinter UI'''

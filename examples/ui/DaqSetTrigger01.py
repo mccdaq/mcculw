@@ -1,42 +1,77 @@
+"""
+File:                       DaqSetTrigger01.py
+
+Library Call Demonstrated:  mcculw.ul.daq_set_trigger()
+
+Purpose:                    Sets start and stop triggers. These triggers are
+                            used to initiate and terminate A/D conversion using
+                            mcculw.ul.daq_in_scan(), with
+                            mcculw.enums.ScanOptions.EXTTRIGGER selected.
+
+Demonstration:              Sets start and stop triggers
+                            and displays the input channels data.
+
+Other Library Calls:        mcculw.ul.win_buf_alloc()
+                            mcculw.ul.win_buf_free()
+                            mcculw.ul.daq_in_scan()
+                            mcculw.ul.get_status()
+                            mcculw.ul.to_eng_units()
+                            mcculw.ul.stop_background()
+
+Special Requirements:       Device must support mcculw.ul.daq_in_scan().
+                            Channel 0 should have a signal that transitions
+                            from below 2V to above applied.
+                            Counter 0 should have a TTL signal applied.
+"""
 from __future__ import absolute_import, division, print_function
 from builtins import *  # @UnusedWildImport
 
+import tkinter as tk
 from tkinter import messagebox
+from ctypes import cast, POINTER, c_ushort
 
 from mcculw import ul
-from mcculw.enums import ScanOptions, Status, FunctionType, ChannelType, \
-    ULRange, DigitalPortType, TriggerSensitivity, \
-    TriggerEvent, TriggerSource
-from examples.ui.uiexample import UIExample
-from examples.props.ai import AnalogInputProps
-from examples.props.counter import CounterProps
-from examples.props.daqi import DaqInputProps
-from examples.props.digital import DigitalProps
+from mcculw.enums import (ScanOptions, Status, FunctionType, ChannelType,
+                          ULRange, DigitalPortType, TriggerSensitivity,
+                          TriggerEvent, TriggerSource)
 from mcculw.ul import ULError
-import tkinter as tk
+from mcculw.device_info import DaqDeviceInfo
+
+try:
+    from ui_examples_util import UIExample, show_ul_error
+except ImportError:
+    from .ui_examples_util import UIExample, show_ul_error
 
 
 class DaqSetTrigger01(UIExample):
     def __init__(self, master=None):
         super(DaqSetTrigger01, self).__init__(master)
-
+        # By default, the example detects all available devices and selects the
+        # first device listed.
+        # If use_device_detection is set to False, the board_num property needs
+        # to match the desired board number configured with Instacal.
+        use_device_detection = True
         self.board_num = 0
-        self.daqi_props = DaqInputProps(self.board_num)
-        if self.daqi_props.is_supported:
-            self.ai_props = AnalogInputProps(self.board_num)
-            self.digital_props = DigitalProps(self.board_num)
-            self.counter_props = CounterProps(self.board_num)
-            self.init_scan_channel_info()
-
-        self.create_widgets()
-
-    def init_scan_channel_info(self):
-        self.num_chans = 4
 
         self.chan_list = []
         self.chan_type_list = []
         self.gain_list = []
+        self.num_chans = 4
 
+        try:
+            if use_device_detection:
+                self.configure_first_detected_device()
+
+            self.device_info = DaqDeviceInfo(self.board_num)
+            if self.device_info.supports_daq_input:
+                self.init_scan_channel_info()
+                self.create_widgets()
+            else:
+                self.create_unsupported_widgets()
+        except ULError:
+            self.create_unsupported_widgets(True)
+
+    def init_scan_channel_info(self):
         # Add analog input channels
         self.chan_list.append(0)
         self.chan_type_list.append(ChannelType.ANALOG)
@@ -70,33 +105,32 @@ class DaqSetTrigger01(UIExample):
 
         try:
             # Set the start trigger settings
-            ul.daq_set_trigger(
-                self.board_num, TriggerSource.ANALOG_SW, TriggerSensitivity.RISING_EDGE,
-                self.chan_list[0], self.chan_type_list[0], self.gain_list[0],
-                2, 0, TriggerEvent.START)
+            ul.daq_set_trigger(self.board_num, TriggerSource.ANALOG_SW,
+                               TriggerSensitivity.RISING_EDGE,
+                               self.chan_list[0], self.chan_type_list[0],
+                               self.gain_list[0], 2, 0, TriggerEvent.START)
 
             # Set the stop trigger settings
-            ul.daq_set_trigger(
-                self.board_num, TriggerSource.COUNTER, TriggerSensitivity.ABOVE_LEVEL,
-                self.chan_list[2], self.chan_type_list[2], self.gain_list[2],
-                2, 0, TriggerEvent.START)
+            ul.daq_set_trigger(self.board_num, TriggerSource.COUNTER,
+                               TriggerSensitivity.ABOVE_LEVEL,
+                               self.chan_list[2], self.chan_type_list[2],
+                               self.gain_list[2], 2, 0, TriggerEvent.START)
 
             # Run the scan
-            ul.daq_in_scan(
-                self.board_num, self.chan_list, self.chan_type_list,
-                self.gain_list, self.num_chans, rate, 0, total_count, self.memhandle,
-                scan_options)
+            ul.daq_in_scan(self.board_num, self.chan_list, self.chan_type_list,
+                           self.gain_list, self.num_chans, rate, 0, total_count,
+                           self.memhandle, scan_options)
 
             # Cast the memhandle to a ctypes pointer
             # Note: the ctypes array will only be valid until win_buf_free
             # is called.
             # A copy of the buffer can be created using win_buf_to_array
             # before the memory is freed. The copy can be used at any time.
-            self.array = self.memhandle_as_ctypes_array(self.memhandle)
+            self.array = cast(self.memhandle, POINTER(c_ushort))
         except ULError as e:
             # Free the allocated memory
             ul.win_buf_free(self.memhandle)
-            self.show_ul_error(e)
+            show_ul_error(e)
             return
 
         # Start updating the displayed values
@@ -148,23 +182,6 @@ class DaqSetTrigger01(UIExample):
             # Display the counter value
             self.counter_0_label["text"] = str(array[curr_index + 2])
 
-    def recreate_data_frame(self):
-        low_chan = self.low_chan
-        high_chan = self.high_chan
-
-        new_data_frame = tk.Frame(self.inner_data_frame)
-
-        self.chan_labels = []
-        # Add the labels for each channel
-        for chan_num in range(low_chan, high_chan + 1):
-            chan_label = tk.Label(new_data_frame, justify=tk.LEFT, padx=3)
-            chan_label.grid(row=0, column=chan_num - low_chan)
-            self.chan_labels.append(chan_label)
-
-        self.data_frame.destroy()
-        self.data_frame = new_data_frame
-        self.data_frame.grid()
-
     def stop(self):
         ul.stop_background(self.board_num, FunctionType.DAQIFUNCTION)
 
@@ -177,107 +194,86 @@ class DaqSetTrigger01(UIExample):
         self.start_button["text"] = "Stop"
         self.start_scan()
 
-    def get_low_channel_num(self):
-        try:
-            return int(self.low_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def get_high_channel_num(self):
-        try:
-            return int(self.high_channel_entry.get())
-        except ValueError:
-            return 0
-
-    def validate_channel_entry(self, p):
-        if p == '':
-            return True
-        try:
-            value = int(p)
-            if(value < 0 or value > self.ai_props.num_ai_chans - 1):
-                return False
-        except ValueError:
-            return False
-
-        return True
-
     def create_widgets(self):
         '''Create the tkinter UI'''
-        if self.daqi_props.is_supported:
-            main_frame = tk.Frame(self)
-            main_frame.pack(fill=tk.X, anchor=tk.NW)
+        self.device_label = tk.Label(self)
+        self.device_label.pack(fill=tk.NONE, anchor=tk.NW)
+        self.device_label["text"] = ('Board Number ' + str(self.board_num)
+                                     + ": " + self.device_info.product_name
+                                     + " (" + self.device_info.unique_id + ")")
 
-            curr_row = 0
-            chan_0_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            chan_0_left_label["text"] = "Channel 0:"
-            chan_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        main_frame = tk.Frame(self)
+        main_frame.pack(fill=tk.X, anchor=tk.NW)
 
-            self.chan_0_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.chan_0_label.grid(row=curr_row, column=1, sticky=tk.W)
+        curr_row = 0
+        chan_0_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        chan_0_left_label["text"] = "Channel 0:"
+        chan_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            curr_row += 1
-            digital_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            digital_left_label["text"] = "FIRSTPORTA:"
-            digital_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        self.chan_0_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.chan_0_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            self.digital_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.digital_label.grid(row=curr_row, column=1, sticky=tk.W)
+        curr_row += 1
+        digital_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        digital_left_label["text"] = "FIRSTPORTA:"
+        digital_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            curr_row += 1
-            counter_0_left_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            counter_0_left_label["text"] = "Counter 0:"
-            counter_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        self.digital_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.digital_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            self.counter_0_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            self.counter_0_label.grid(row=curr_row, column=1, sticky=tk.W)
+        curr_row += 1
+        counter_0_left_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        counter_0_left_label["text"] = "Counter 0:"
+        counter_0_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            curr_row += 1
-            setpoint_status_left_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            setpoint_status_left_label["text"] = "Status:"
-            setpoint_status_left_label.grid(
-                row=curr_row, column=0, sticky=tk.W)
+        self.counter_0_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        self.counter_0_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            self.setpoint_status_label = tk.Label(
-                main_frame, justify=tk.LEFT, padx=3)
-            self.setpoint_status_label["text"] = "Idle"
-            self.setpoint_status_label.grid(
-                row=curr_row, column=1, sticky=tk.W)
+        curr_row += 1
+        setpoint_status_left_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        setpoint_status_left_label["text"] = "Status:"
+        setpoint_status_left_label.grid(
+            row=curr_row, column=0, sticky=tk.W)
 
-            curr_row += 1
-            index_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            index_left_label["text"] = "Index:"
-            index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        self.setpoint_status_label = tk.Label(
+            main_frame, justify=tk.LEFT, padx=3)
+        self.setpoint_status_label["text"] = "Idle"
+        self.setpoint_status_label.grid(
+            row=curr_row, column=1, sticky=tk.W)
 
-            self.index_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.index_label["text"] = "-1"
-            self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
+        curr_row += 1
+        index_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        index_left_label["text"] = "Index:"
+        index_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            curr_row += 1
-            count_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            count_left_label["text"] = "Count:"
-            count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
+        self.index_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.index_label["text"] = "-1"
+        self.index_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            self.count_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
-            self.count_label["text"] = "0"
-            self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
+        curr_row += 1
+        count_left_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        count_left_label["text"] = "Count:"
+        count_left_label.grid(row=curr_row, column=0, sticky=tk.W)
 
-            button_frame = tk.Frame(self)
-            button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
+        self.count_label = tk.Label(main_frame, justify=tk.LEFT, padx=3)
+        self.count_label["text"] = "0"
+        self.count_label.grid(row=curr_row, column=1, sticky=tk.W)
 
-            self.start_button = tk.Button(button_frame)
-            self.start_button["text"] = "Start"
-            self.start_button["command"] = self.start
-            self.start_button.grid(row=0, column=0, padx=3, pady=3)
+        button_frame = tk.Frame(self)
+        button_frame.pack(fill=tk.X, side=tk.RIGHT, anchor=tk.SE)
 
-            quit_button = tk.Button(button_frame)
-            quit_button["text"] = "Quit"
-            quit_button["command"] = self.master.destroy
-            quit_button.grid(row=0, column=1, padx=3, pady=3)
-        else:
-            self.create_unsupported_widgets(self.board_num)
+        self.start_button = tk.Button(button_frame)
+        self.start_button["text"] = "Start"
+        self.start_button["command"] = self.start
+        self.start_button.grid(row=0, column=0, padx=3, pady=3)
+
+        quit_button = tk.Button(button_frame)
+        quit_button["text"] = "Quit"
+        quit_button["command"] = self.master.destroy
+        quit_button.grid(row=0, column=1, padx=3, pady=3)
 
 
 if __name__ == "__main__":
