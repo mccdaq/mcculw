@@ -1,7 +1,5 @@
 # -*- coding: UTF-8 -*-
-
 from __future__ import absolute_import, division, print_function
-
 try:
     # Prefer the Python 3.6+ IntFlag
     from enum import IntFlag
@@ -674,10 +672,10 @@ class ULRange(ULRangeEnum):
     BIPPT01VOLTS = (9, -.01, .01)  # -.01 to +.01 Volts
     BIPPT005VOLTS = (10, -.005, .005)  # -.005 to +.005 Volts
     BIP1PT67VOLTS = (11, -1.67, 1.67)  # -1.67 to +1.67 Volts
-    BIPPT312VOLTS = (17, -.312, .312)  # -0.312 to +0.312 Volts
-    BIPPT156VOLTS = (18, -.156, .156)  # -0.156 to +0.156 Volts
+    BIPPT312VOLTS = (17, -.3125, .3125)  # -0.3125 to +0.3125 Volts
+    BIPPT156VOLTS = (18, -.15625, .15625)  # -0.15625 to +0.15625 Volts
     BIPPT125VOLTS = (22, -.125, .125)  # -0.125 to +0.125 Volts
-    BIPPT078VOLTS = (19, -.078, .078)  # -0.078 to +0.078 Volts
+    BIPPT078VOLTS = (19, -.078125, .078125)  # -0.078125 to +0.078125 Volts
     UNI10VOLTS = (100, 0, 10.)  # 0 to 10 Volts
     UNI5VOLTS = (101, 0, 5.)  # 0 to 5 Volts
     UNI4VOLTS = (114, 0, 4.)  # 0 to 4 Volts
@@ -965,7 +963,9 @@ class InfoType(IntEnum):
     DIGITALINFO = 3
     COUNTERINFO = 4
     EXPANSIONINFO = 5
+    MISCINFO = 6
     EXPINFOARRAY = 7
+    MEMINFO = 8
 
 
 class GlobalInfo(IntEnum):
@@ -1258,6 +1258,7 @@ class BoardInfo(IntEnum):
     DAQICHANTYPE = 377
     DAQONUMCHANTYPES = 378
     DAQOCHANTYPE = 379
+    BICTRZACTIVEMODE = 380
 
 
 class DigitalInfo(IntEnum):
@@ -1271,9 +1272,6 @@ class DigitalInfo(IntEnum):
     CURVAL = 7  # Current value of outputs
     INMASK = 8  # Input bit-mask
     OUTMASK = 9  # Output bit mask
-    INITPORTVAL = 10  # Initial output value of port upon DConfig
-    HASPACER = 11
-    PORTIOTYPE = 12
     # Disables checking port/bit direction in d_out and d_bit_out functions
     DISABLEDIRCHECK = 13
 
@@ -1281,7 +1279,7 @@ class DigitalInfo(IntEnum):
 class CounterInfo(IntEnum):
     BASEADR = 0  # Base address
     INITIALIZED = 1  # TRUE or FALSE
-    CTRTYPE = 2  # Counter type 8254, 9513 or 8536
+    CTRTYPE = 2  # CounterChannelType
     CTRNUM = 3  # Counter number
     CONFIGBYTE = 4  # Configuration byte
 
@@ -1331,29 +1329,6 @@ class AiChanType(IntEnum):
     FULL_BRIDGE_7PT8mVV = 505  # Full-bridge mode, ±7.8 mV/V
 
 
-class TempSensorType(IntEnum):
-    RTD = 0x00
-    THERMISTOR = 0x01
-    THERMOCOUPLE = 0x02
-    SEMICONDUCTOR = 0x03
-    DISABLED = 0x04
-    VOLTAGE = 0x05
-
-
-class TempSensorConnectionType(IntEnum):
-    CONN_2_WIRE = 0x00
-    CONN_2_WIRE_2 = 0x01
-    CONN_3_WIRE = 0x02
-    CONN_4_WIRE = 0x03
-
-
-class ExcitationLevel(IntEnum):
-    NONE = 0x00
-    THERMISTOR = 0x01
-    RTD = 0x02
-    PLUS = 0x03
-
-
 class TcType(IntEnum):
     J = 0x01
     K = 0x02
@@ -1363,13 +1338,6 @@ class TcType(IntEnum):
     S = 0x06
     B = 0x07
     N = 0x08
-
-
-class SemiconductorTempSensorType(IntEnum):
-    CUSTOM = 0x00
-    TMP35 = 0x01
-    TMP36 = 0x02
-    TMP37 = 0x03
 
 
 class PlatinumRTDType(IntEnum):
@@ -1419,3 +1387,12 @@ class CounterChannelType(IntEnum):
     CTRTMR = 7
     CTRQUAD = 8
     CTRPULSE = 9
+
+
+class Counter8254ConfigType(IntEnum):
+    HIGHONLASTCOUNT = 0
+    ONESHOT = 1
+    RATEGENERATOR = 2
+    SQUAREWAVE = 3
+    SOFTWARESTROBE = 4
+    HARDWARESTROBE = 5

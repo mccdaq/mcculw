@@ -4,16 +4,15 @@
 Wraps all of the methods from UL for use in Python.
 """
 from __future__ import absolute_import, division, print_function
-
 import collections
+import struct
 from ctypes import *  # @UnusedWildImport
 from ctypes.wintypes import HGLOBAL
-import struct
-
+from ctypes.util import find_library
 from builtins import *  # @UnusedWildImport
 
-from mcculw.enums import ErrorCode, Status, ChannelType, TimerIdleState, \
-    PulseOutOptions, TInOptions
+from mcculw.enums import (ErrorCode, Status, ChannelType, TimerIdleState,
+                          PulseOutOptions, TInOptions)
 from mcculw.structs import DaqDeviceDescriptor
 
 
@@ -31,10 +30,12 @@ _ERRSTRLEN = 256
 _BOARDNAMELEN = 64
 
 # Load the correct library based on the Python architecture in use
-if struct.calcsize("P") == 4:
-    _cbw = WinDLL('cbw32.dll')
-else:
-    _cbw = WinDLL('cbw64.dll')
+is_32bit = struct.calcsize("P") == 4
+dll_file_name = 'cbw32.dll' if is_32bit else 'cbw64.dll'
+dll_absolute_path = find_library(dll_file_name)
+if dll_absolute_path is None:
+    dll_absolute_path = dll_file_name
+_cbw = WinDLL(dll_absolute_path)
 
 _cbw.cbAChanInputMode.argtypes = [c_int, c_int, c_int]
 
@@ -780,6 +781,71 @@ def a_pretrig(board_num, low_chan, high_chan, pretrig_count, total_count, rate,
         err_code, pretrig_count_internal.value, total_count_internal.value, rate_internal.value)
 
 
+AConvertPretrigResult = collections.namedtuple("AConvertPretrigResult", "data, chan_tags")
+_cbw.cbAConvertPretrigData.argtypes = [c_int, c_long, c_long, POINTER(c_ushort), POINTER(c_ushort)]
+
+
+def a_convert_pretrig_data(board_num, pretrig_count, total_count, data, chan_tags = None):
+    """For products with pretrigger implemented in hardware (most products), this function converts
+    and aligns the raw data collected by :func:`.a_pretrig`. The :func:`.a_pretrig` function can
+    return either raw A/D data or converted data, depending on whether or not the
+    :class:`ScanOptions.CONVERTDATA` option was used. The raw data as it is collected is not in the
+    correct order. After the data collection is completed it must be rearranged into the correct
+    order. This function correctly orders the data also, starting with the first pretrigger data
+    point and ending with the last post-trigger point.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    pretrig_count : int
+        Number of pre-trigger samples. This value must match the actual_pretrig_count returned
+        by the :func:`.a_pretrig` function.
+    total_count : int
+        Total number of samples that were collected.
+    data : POINTER(c_ushort)
+        Pointer to the data array.
+    chan_tags : POINTER(c_ushort), optional
+        Pointer to the channel tag array. Default value is None if omitted. A value of
+        None may be passed if using 16-bit boards or if channel tags are not desired;
+        see the note regarding 16-bit boards below.
+
+    Returns
+    -------
+    data : POINTER(c_ushort)
+        Pointer to the data array.
+    chan_tags : POINTER(c_ushort), optional
+        Pointer to the channel tag array or None.
+
+
+    Notes
+    -----
+    When you collect data with :func:`.a_pretrig` and you don't use the
+    :class:`ScanOptions.CONVERTDATA` option, you must use this function to convert the data after
+    it is collected. There are cases where the :class:`ScanOptions.CONVERTDATA` option is not
+    allowed, for example, if you use the BACKGROUND option with :func:`.a_pretrig` on some
+    devices, the :class:`ScanOptions.CONVERTDATA` option is not allowed. In those cases this
+    function should be used to convert the data after the data collection is complete.
+
+    12-Bit A/D boards
+        On some 12-bit boards, each raw data point consists of a 12-bit A/D value with a 4-bit
+        channel number. This function pulls each data point apart and puts the A/D value into the
+        data array and the channel number into the ChanTags array. Upon returning from
+        :func:`a_convert_pretrig_data`, the data array contains only 12-bit A/D data.
+
+    16-Bit A/D boards
+        This function is for use with 16-bit A/D boards only insofar as ordering the data.
+        No channel tags are returned.
+    """
+    pretrig_count_internal = c_long(pretrig_count)
+    total_count_internal = c_long(total_count)
+    error_code = _cbw.cbAConvertPretrigData(board_num, pretrig_count_internal,
+                                            total_count_internal, data, chan_tags)
+    _check_err(error_code)
+    return AConvertPretrigResult(data, chan_tags)
+
+
 _cbw.cbATrig.argtypes = [c_int, c_int, c_int,
                          c_ushort, c_int, POINTER(c_ushort)]
 
@@ -821,6 +887,51 @@ def a_trig(board_num, channel, trig_type, trig_value, ul_range):
     _check_err(_cbw.cbATrig(
         board_num, channel, trig_type, trig_value, ul_range, byref(data_value)))
     return data_value.value
+
+
+_cbw.cbACalibrateData.argtypes = [c_int, c_long, c_int, POINTER(c_ushort)]
+
+
+def a_calibrate_data(board_num, num_points, range, data):
+    """Calibrates the raw data collected by :func:`.a_in_scan` from boards with real time
+    software calibration when the real time calibration has been turned off. The
+    :func:`.a_in_scan` function can return either raw A/D data or calibrated data,
+    depending on whether or not the :class:`ScanOptions.NOCALIBRATEDATA` option was used.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    num_points : int
+        Number of samples to convert.
+    range : int
+        The programmable gain/range used when the data was collected. Refer to board specific
+        information for a list of the supported A/D ranges of each board.
+    data : POINTER(c_ushort)
+        Pointer to the data array.
+
+    Returns
+    -------
+    POINTER(c_ushort)
+        Pointer to the converted data array.
+
+
+    Notes
+    -----
+    When collecting data using :func:`.a_in_scan` with the :class:`ScanOptions.NOCALIBRATEDATA`
+    option, use this function to calibrate the data once collected.
+
+    Applying software calibration factors in real time on a per sample basis eats up machine
+    cycles. If your CPU is slow, or if processing time is at a premium, do not calibrate until
+    the acquisition run finishes. Turn off real time software calibration to save CPU time
+    during high speed acquisitions by using the :class:`ScanOptions.NOCALIBRATEDATA` option to
+    a turn off real-time software calibration. After the acquisition is run, calibrate the data
+    with :func:`.a_calibrate_data`.
+    """
+    num_points_internal = c_long(num_points)
+    _check_err(_cbw.cbACalibrateData(board_num, num_points_internal, range, data))
+    return data
 
 
 _cbw.cbCClear.argtypes = [c_int, c_int]
@@ -1637,6 +1748,60 @@ def c_load_64(board_num, reg_num, load_value):
       to load counts that are larger than 32-bits (counts > 4,294,967,295).
     """
     _check_err(_cbw.cbCLoad64(board_num, reg_num, load_value))
+
+
+_cbw.cbC8254Config  .argtypes = [c_int, c_int, c_int]
+
+
+def c_8254_config(board_num, counter_num, config):
+    """Configures 8254 counter for desired operation. This method can only be used with
+    8254 counters. For more information, refer to the 82C54 data sheet (82C54.pdf) in
+    the Documents subdirectory where the UL is installed
+    (C:\Program files\Measurement Computing\DAQ by default).
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    counter_num : int
+        Selects one of the counter channels. An 8254 has 3 counters. The value may be 1 - n,
+        where n is the number of 8254 counters on the board (see board-specific information
+        in the Universal Library User's Guide).
+    config : int
+        Refer to the 8254 data sheet for a detailed description of each of the configurations.
+        Set it to one of the following constants:
+    .. table:: **config parameter values (:class:`Counter8254ConfigType`)**
+
+        ================  =========================================================
+        HARDWARESTROBE    Output of counter (OUT N) pulses low for one clock cycle
+                          on terminal count. Count starts on rising edge at GATE N
+                          input. See Mode 5 in the 82C54 data sheet (82C54.pdf) in
+                          the Documents subdirectory where you installed the UL.
+        ----------------  ---------------------------------------------------------
+        HIGHONLASTCOUNT   Output of counter (OUT N) transitions from low to high
+                          on terminal count and remains high until reset. See Mode
+                          0 in the 8254 data sheet (82C54.pdf).
+        ----------------  ---------------------------------------------------------
+        ONESHOT           Output of counter (OUT N) transitions from high to low
+                          on rising edge of GATE N, then back to high on terminal
+                          count. See Mode 1 in the 8254 data sheet (82C54.pdf).
+        ----------------  ---------------------------------------------------------
+        RATEGENERATOR     Output of counter (OUT N) pulses low for one clock cycle
+                          on terminal count, reloads counter and recycles. See
+                          Mode 2 in the 8254 data sheet (82C54.pdf).
+        ----------------  ---------------------------------------------------------
+        SOFTWARESTROBE    Output of counter (OUT N) pulses low for one clock cycle
+                          on terminal count. Count starts after counter is loaded.
+                          See Mode 4 in the 8254 data sheet (82C54.pdf).
+        ----------------  ---------------------------------------------------------
+        SQUAREWAVE        Output of counter (OUT N) is high for count < 1/2
+                          terminal count then low until terminal count, whereupon
+                          it recycles. This mode generates a square wave. See Mode
+                          3 in the 8254 data sheet (82C54.pdf).
+        ================  =========================================================
+    """
+    _check_err(_cbw.cbC8254Config(board_num, counter_num, config))
 
 
 _cbw.cbCreateDaqDevice.argtypes = [c_int, DaqDeviceDescriptor]
@@ -4529,14 +4694,14 @@ def set_config(info_type, board_num, dev_num, config_item, config_val):
         |               |                   | dev_num is ignored.                                 |
         |               |                   |                                                     |
         |               |                   | Set config_val to one of the                        |
-        |               |                   | :class:`~mcculw.enums.ExtPacerEdge` enum values.   |
+        |               |                   | :class:`~mcculw.enums.ExtPacerEdge` enum values.    |
         |               +-------------------+-----------------------------------------------------+
         |               | EXTOUTPACEREDGE    | The output pacer clock edge.                       |
         |               |                   |                                                     |
         |               |                   | dev_num is ignored.                                 |
         |               |                   |                                                     |
         |               |                   | Set config_val to one of the                        |
-        |               |                   | :class:`~mcculw.enums.ExtPacerEdge` enum values.   |
+        |               |                   | :class:`~mcculw.enums.ExtPacerEdge` enum values.    |
         |               +-------------------+-----------------------------------------------------+
         |               | INPUTPACEROUT     | Input pacer clock output enable/disable setting.    |
         |               |                   |                                                     |
@@ -5822,7 +5987,7 @@ def in_byte(board_num, port_num):
         The number associated with the board when it was installed with InstaCal or created
         with :func:`.create_daq_device`.
     port_num : int
-        RRegister within the board. Boards are set to a particular base address. The registers
+        Register within the board. Boards are set to a particular base address. The registers
         on the boards are at addresses that are offsets from the base address of the
         board (BaseAdr + 0, BaseAdr + 2, etc).
         Set this argument to the offset for the desired register. This function takes care
@@ -5866,6 +6031,92 @@ def out_byte(board_num, port_num, port_value):
         VValue that is written to the register.
     """
     _check_err(_cbw.cbOutByte(board_num, port_num, port_value))
+
+
+_cbw.cbInWord.argtypes = [c_int, c_int]
+
+
+def in_word(board_num, port_num):
+    """Reads a word from a hardware register on a board.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    port_num : int
+        Register within the board. Boards are set to a particular base address. The registers
+        on the boards are at addresses that are offsets from the base address of the
+        board (BaseAdr + 0, BaseAdr + 2, etc).
+        Set this argument to the offset for the desired register. This function takes care
+        of adding the base address to the offset, so that the board's address can be changed
+        without changing the code.
+
+    Returns
+    -------
+    int
+        The current value of the specified register.
+        cbInByte() is used to read 8 bit ports.
+
+    Notes
+    -----
+    - Unlike most other functions in the library, this function does not raise a ULError. It
+      returns a word value from the devices on board NVRAM.
+      If an error occurs, the value will come back as 0 to indicate that a value was not read.
+    """
+    return _cbw.cbInWord(board_num, port_num)
+
+
+_cbw.cbOutWord.argtypes = [c_int, c_int, c_int]
+
+
+def out_word(board_num, port_num, port_value):
+    """Writes a word to a hardware register on a board.
+
+    Parameters
+    ----------
+    board_num : int
+        The number associated with the board when it was installed with InstaCal or created
+        with :func:`.create_daq_device`.
+    port_num : int
+        Register within the board. Boards are set to a particular base address. The registers
+        on the boards are at addresses that are offsets from the base address of the board
+        (BaseAdr + 0, BaseAdr + 2, etc).
+        Set this argument to the offset for the desired register. This function takes care of
+        adding the base address to the offset, so that the board's address can be changed
+        without changing the code.
+    port_value : int
+        Value that is written to the register.
+    """
+    _check_err(_cbw.cbOutWord(board_num, port_num, port_value))
+
+
+_cbw.cbLoadConfig.argtypes = [c_char_p]
+
+
+def load_config(config_file_name):
+    """Loads the configuration values from a file.
+
+    Parameters
+    ----------
+    config_file_name : str
+        The configuration file name
+    """
+    _check_err(_cbw.cbLoadConfig(config_file_name.encode('utf-8')))
+
+
+_cbw.cbSaveConfig.argtypes = [c_char_p]
+
+
+def save_config(config_file_name):
+    """Save the configuration values to a file.
+
+    Parameters
+    ----------
+    config_file_name : str
+        The configuration file name
+    """
+    _check_err(_cbw.cbSaveConfig(config_file_name.encode('utf-8')))
 
 
 def _to_ctypes_array(list_, datatype):

@@ -5,14 +5,18 @@ Author       Measurement Computing
 
 About
 =====
+
 The **mcculw** package contains an API (Application Programming Interface) for interacting with the
 I/O Library for Measurement Computing Data Acquisition products, Universal Library. This package
 was created and is supported by MCC. The package is implemented in Python as a wrapper around the
 Universal Library C API using the ctypes_ Python Library.
 
+    Note: The **mcculw** examples included in version 1.0.0 and later are not backward compatible with pre-release
+    versions of the **mcculw** Python package.  See the `Examples`_ section for more details.
+
 **mcculw** is supported for Universal Library 6.55 and later. Some functions in the **mcculw**
 package may be unavailable with earlier versions of Universal Library. Visit
-http://www.mccdaq.com/Software-Downloads.aspx to upgrade your version of UL. 
+http://www.mccdaq.com/Software-Downloads.aspx to upgrade your version of UL.
 
 **mcculw** supports only the Windows operating system.
 
@@ -28,18 +32,18 @@ Installation
 
    a. Open the Windows command prompt: press Win+R, type cmd.exe and press Enter.
    b. Upgrade pip to the latest version by entering the following command::
-      
+
         pip install --upgrade pip
-      
+
    c. Install the mcculw library by entering the following command::
-   
+
         pip install mcculw
 
    Note: If you get a message like "pip is not recognized as an internal or external command...", or
    if you have multiple Python installations, enter the full path to the pip executable, such as
    *C:\\Python27\\Scripts\\pip install --upgrade pip* or *C:\\Python27\\Scripts\\pip install mcculw*.
    The pip command is in the Scripts subdirectory of your Python install location.
-    
+
 Examples
 ========
 Download the `examples zip file`_ from the **mcculw** GitHub repository.
@@ -51,6 +55,12 @@ Unzip the examples to a known location, such as::
 Refer to the knowledgebase article `Importing Python for Windows example programs into an IDE`_
 for detailed instructions on how to import examples into popular IDEs such as Eclipse and Visual
 Studio.
+
+    Note: The latest examples take advantage of the **mcculw.device_info** subpackage
+    added in version 1.0.0. Software developed using the props subpackage included in
+    the examples folder of pre-release versions will continue to work with version 1.0.0
+    and later of the **mcculw** Python package, but requires the inclusion of the props subdirectory.
+    See the mcculw GitHub `Releases`_ page for a complete archive of previous releases.
 
 Usage
 =====
@@ -106,3 +116,4 @@ Documentation is available in the `Universal Library Help`_.
 .. _`GitHub Issues`: https://github.com/mccdaq/mcculw/issues
 .. _`examples zip file`: https://github.com/mccdaq/mcculw/raw/master/examples.zip
 .. _`Importing Python for Windows example programs into an IDE`: http://kb.mccdaq.com/KnowledgebaseArticle50716.aspx
+.. _`Releases`: https://github.com/mccdaq/mcculw/releases

@@ -1,7 +1,7 @@
 # Always prefer setuptools over distutils
 from setuptools import setup, find_packages
 
-__version__ = '0.9.8'
+__version__ = '1.0.0'
 
 
 def read_contents(file_to_read):
@@ -36,7 +36,7 @@ setup(
         #   3 - Alpha
         #   4 - Beta
         #   5 - Production/Stable
-        'Development Status :: 4 - Beta',
+        'Development Status :: 5 - Production/Stable',
 
         # Indicate who your project is intended for
         'Intended Audience :: Developers',
@@ -50,7 +50,7 @@ setup(
         'Programming Language :: Python :: 2',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.8',
     ],
 
     # What does your project relate to?
