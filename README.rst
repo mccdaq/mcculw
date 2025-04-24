@@ -16,7 +16,7 @@ Universal Library C API using the ctypes_ Python Library.
 
 **mcculw** is supported for Universal Library 6.55 and later. Some functions in the **mcculw**
 package may be unavailable with earlier versions of Universal Library. Visit
-http://www.mccdaq.com/Software-Downloads.aspx to upgrade your version of UL.
+https://digilent.com/reference/software/universal-library/windows/start to upgrade your version of UL.
 
 **mcculw** supports only the Windows operating system.
 
@@ -27,7 +27,7 @@ The **mcculw** package is available on GitHub_ and PyPI_.
 Installation
 ============
 1. Install Python version 2.7, 3.4, or later from https://www.python.org/downloads/ .
-2. Install the latest version of InstaCal from http://www.mccdaq.com/Software-Downloads.aspx .
+2. Install the latest version of InstaCal from https://digilent.com/reference/software/instacal/start.
 3. Install the the MCC UL Python API for Windows (mcculw) and any dependencies using pip:
 
    a. Open the Windows command prompt: press Win+R, type cmd.exe and press Enter.
@@ -95,7 +95,7 @@ examples may be found on `GitHub`_.
 Support/Feedback
 ================
 The **mcculw** package is supported by MCC. For support for **mcculw**, contact technical support
-through http://www.mccdaq.com/Support.aspx . Please include version information for Python,
+through the `Digilent Forum`_. Please include version information for Python,
 Universal Library and the **mcculw** packages used as well as detailed steps on how to reproduce the
 problem in your request.
 
@@ -112,8 +112,9 @@ Documentation is available in the `Universal Library Help`_.
 .. _GitHub: https://github.com/mccdaq/mcculw
 .. _PyPI: https://pypi.python.org/pypi/mcculw
 .. _ctypes: https://docs.python.org/3/library/ctypes.html
-.. _`Universal Library Help`: https://www.mccdaq.com/PDFs/Manuals/Mcculw_WebHelp/ULStart.htm
+.. _`Universal Library Help`: https://digilent.com/reference/software/universal-library/windows/start
 .. _`GitHub Issues`: https://github.com/mccdaq/mcculw/issues
 .. _`examples zip file`: https://github.com/mccdaq/mcculw/raw/master/examples.zip
-.. _`Importing Python for Windows example programs into an IDE`: http://kb.mccdaq.com/KnowledgebaseArticle50716.aspx
+.. _`Importing Python for Windows example programs into an IDE`: https://digilent.com/reference/daq-and-datalogging/documents/python-for-windows-examples
 .. _`Releases`: https://github.com/mccdaq/mcculw/releases
+.. _`Digilent Forum`: https://forum.digilent.com/
